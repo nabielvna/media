@@ -1,7 +1,20 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+    webpack: (config) => {
+        return config
+    },
+    async rewrites() {
+        return []
+    },
+    images: {
+        remotePatterns: [
+          {
+            protocol: 'https',
+            hostname: 'placehold.co',
+          },
+        ],
+      },
 };
 
 export default nextConfig;
