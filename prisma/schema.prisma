@@ -1,14 +1,222 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?   @db.VarChar(200)
+  email         String?   @unique @db.VarChar(100)
+  emailVerified DateTime? @map("email_verified")
+  image         String?   @db.VarChar(1000)
+  password      String?   @db.VarChar(200)
+
+  accounts         Account[]
+  sessions         Session[]
+  news             News[]
+  userInteractions UserInteraction[]
+
+  @@map("users")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model News {
+  id            String   @id @default(cuid())
+  path          String   @unique @db.VarChar(100)
+  title         String   @db.VarChar(200)
+  thumbnailUrl  String?  @map("thumbnail_url") @db.VarChar(1000)
+  description   String   @db.VarChar(200)
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  subCategoryId String   @map("sub_category_id")
+  userId        String   @map("user_id")
+
+  user             User              @relation(fields: [userId], references: [id])
+  subCategory      SubCategory       @relation(fields: [subCategoryId], references: [id])
+  sections         Section[]
+  newsInteractions NewsInteraction[]
+
+  @@map("news")
+}
+
+model Section {
+  id          String   @id @default(cuid())
+  order       Int
+  isSeparator Boolean  @map("is_separator")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  newsId      String   @map("news_id")
+
+  news          News           @relation(fields: [newsId], references: [id])
+  sectionImages SectionImage[]
+  sectionTexts  SectionText[]
+
+  @@map("sections")
+}
+
+model SectionImage {
+  id          String   @id @default(cuid())
+  imageUrl    String   @map("image_url") @db.VarChar(1000)
+  alt         String   @db.VarChar(50)
+  description String   @db.VarChar(150)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  sectionId   String   @map("sections_id")
+
+  section Section @relation(fields: [sectionId], references: [id])
+
+  @@map("section_images")
+}
+
+model SectionText {
+  id        String   @id @default(cuid())
+  text      String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  sectionId String   @map("sections_id")
+
+  section Section @relation(fields: [sectionId], references: [id])
+
+  @@map("section_text")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  path        String   @unique @db.VarChar(100)
+  title       String   @db.VarChar(100)
+  description String   @db.VarChar(200)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  subCategories SubCategory[]
+
+  @@map("categories")
+}
+
+model SubCategory {
+  id          String   @id @default(cuid())
+  path        String   @unique @db.VarChar(100)
+  title       String   @db.VarChar(100)
+  description String   @db.VarChar(200)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  categoryId  String   @map("category_id")
+
+  category Category @relation(fields: [categoryId], references: [id])
+  news     News[]
+
+  @@map("sub_categories")
+}
+
+model UserInteraction {
+  id                String   @id @default(cuid())
+  contributionScore Int      @map("contribution_score")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  userId            String   @map("user_id")
+
+  user      User       @relation(fields: [userId], references: [id])
+  likes     Like[]
+  bookmarks Bookmark[]
+  comments  Comment[]
+
+  @@map("users_interactions")
+}
+
+model NewsInteraction {
+  id              String   @id @default(cuid())
+  popularityScore Int      @map("popularity_score")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  newsId          String   @map("news_id")
+
+  news      News       @relation(fields: [newsId], references: [id])
+  likes     Like[]
+  bookmarks Bookmark[]
+  comments  Comment[]
+
+  @@map("news_interactions")
+}
+
+model Like {
+  id                String   @id @default(cuid())
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  newsInteractionId String   @map("news_interaction_id")
+  userInteractionId String   @map("user_interaction_id")
+
+  newsInteraction NewsInteraction @relation(fields: [newsInteractionId], references: [id])
+  userInteraction UserInteraction @relation(fields: [userInteractionId], references: [id])
+
+  @@map("likes")
+}
+
+model Bookmark {
+  id                String   @id @default(cuid())
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  newsInteractionId String   @map("news_interaction_id")
+  userInteractionId String   @map("user_interaction_id")
+
+  newsInteraction NewsInteraction @relation(fields: [newsInteractionId], references: [id])
+  userInteraction UserInteraction @relation(fields: [userInteractionId], references: [id])
+
+  @@map("bookmarks")
+}
+
+model Comment {
+  id                String @id @default(cuid())
+  text              String @db.Text
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  newsInteractionId String @map("news_interaction_id")
+  userInteractionId String @map("user_interaction_id")
+
+  newsInteraction NewsInteraction @relation(fields: [newsInteractionId], references: [id])
+  userInteraction UserInteraction @relation(fields: [userInteractionId], references: [id])
+
+  @@map("comments")
 }

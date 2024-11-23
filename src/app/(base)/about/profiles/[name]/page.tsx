@@ -68,7 +68,7 @@ export default function ExecutiveProfile({ params }: PageProps): JSX.Element {
                         className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-2"
                     >
                         <ArrowLeft size={20} />
-                        Back to About
+                        Back
                     </Link>
                 </div>
             </div>
@@ -84,7 +84,7 @@ export default function ExecutiveProfile({ params }: PageProps): JSX.Element {
                     className="inline-flex items-center gap-2 text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 mb-8 transition-colors"
                 >
                     <ArrowLeft size={20} />
-                    Back to About
+                    Back
                 </Link>
 
                 {/* Profile Header */}
