@@ -18,7 +18,7 @@ const SectionTextSchema = z.object({
 });
 
 const SectionSchema = z.object({
-    id: z.string().optional(), // For updates
+    id: z.string().optional(),
     order: z.number().min(0),
     isSeparator: z.boolean(),
     content: z.discriminatedUnion('type', [

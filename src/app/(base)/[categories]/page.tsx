@@ -160,6 +160,10 @@ async function getData(categoryPath: string): Promise<NewsData> {
     const category = await validateCategory(categoryPath);
 
     const getRandomSubcategory = () => {
+        if (!category.subCategories?.length) {
+            return "Uncategorized";
+        }
+
         const randomIndex = Math.floor(Math.random() * category.subCategories.length);
         return category.subCategories[randomIndex].title;
     };

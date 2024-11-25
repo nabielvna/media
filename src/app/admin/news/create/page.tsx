@@ -33,6 +33,7 @@ import {
     DropResult,
 } from '@hello-pangea/dnd';
 import { useRouter } from 'next/navigation';
+import RichTextEditor from '@/components/tiptap/rich-text-editor';
 
 // Types
 type SectionContent = {
@@ -114,11 +115,9 @@ const TextSection = ({
     value: string;
     onChange: (value: string) => void;
 }) => (
-    <Textarea
+    <RichTextEditor
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="min-h-[200px] bg-muted"
-        placeholder="Enter your content here..."
+        onChange={onChange}
     />
 );
 
