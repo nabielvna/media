@@ -11,7 +11,7 @@ const Layout: React.FC<AdminLayoutProps> = ({ children }) => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
     return (
-        <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+        <div className="min-h-screen bg-background">
             <Sidebar
                 sidebarOpen={sidebarOpen}
                 setSidebarOpen={setSidebarOpen}
@@ -20,10 +20,10 @@ const Layout: React.FC<AdminLayoutProps> = ({ children }) => {
 
             <main
                 className={`transition-all duration-300 ${
-                    sidebarOpen ? 'ml-64' : 'ml-20'
+                    sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'
                 } mb-16 p-6`}
             >
-                <div className="mx-auto">{children}</div>
+                <div className="mx-auto max-w-7xl">{children}</div>
             </main>
 
             <Footer sidebarOpen={sidebarOpen} />

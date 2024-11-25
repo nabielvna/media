@@ -1,5 +1,15 @@
+import React from 'react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { Twitter, Facebook, Instagram, Youtube } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const FOOTER_SECTIONS = [
     {
@@ -15,10 +25,7 @@ const FOOTER_SECTIONS = [
         path: '/business',
         links: [
             { href: '/business/macro', label: 'Macro' },
-            {
-                href: '/business/financial-exchange',
-                label: 'Financial Exchange',
-            },
+            { href: '/business/financial-exchange', label: 'Financial Exchange' },
             { href: '/business/real-sector', label: 'Real Sector' },
         ],
     },
@@ -26,8 +33,8 @@ const FOOTER_SECTIONS = [
         title: 'Tech',
         path: '/tech',
         links: [
-            { href: '/tech/gadget', label: 'Gadgets' },
-            { href: '/tech/electronic', label: 'Electronics' },
+            { href: '/tech/gadgets', label: 'Gadgets' },
+            { href: '/tech/electronics', label: 'Electronics' },
             { href: '/tech/telco', label: 'Telco' },
         ],
     },
@@ -60,45 +67,41 @@ const FOOTER_SECTIONS = [
     },
 ];
 
-const ADDITIONAL_SECTIONS = [
-    {
-        title: 'About GOAT NEWS',
-        path: '/about',
-        links: [{ href: '/about/profiles', label: 'GOAT NEWS Profiles' }],
-    },
-];
-
 const Footer = () => {
     return (
-        <footer className="bg-white dark:bg-black text-zinc-900 dark:text-white py-12 px-4 border-t-2 border-zinc-200 dark:border-zinc-800">
-            <div className="max-w-7xl mx-auto">
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
-                    {FOOTER_SECTIONS.map(({ title, path, links }, index) => (
-                        <div
-                            key={title}
-                            className="col-span-1 flex flex-col items-center text-center"
-                        >
-                            <Link
-                                href={path}
-                                className="inline-block font-bold text-lg mb-4 text-zinc-900 dark:text-white hover:text-zinc-600 dark:hover:text-gray-200 border-b border-transparent hover:border-current pb-1"
-                            >
-                                {title}
-                            </Link>
-                            <ul
-                                className={cn(
-                                    'space-y-4 w-full px-6',
-                                    index !== 0 &&
-                                        'border-l border-zinc-200 dark:border-zinc-800'
-                                )}
-                            >
+        <footer className="relative bg-black text-white overflow-hidden">
+            {/* Decorative background pattern
+            <div className="absolute inset-0 bg-black" />
+            <div className="absolute inset-0" style={{
+                backgroundImage: 'radial-gradient(circle at 20px 20px, rgba(255, 255, 255, 0.2) 2%, transparent 1%)',
+                backgroundSize: '50px 50px'
+            }} /> */}
+
+            {/* Main footer content */}
+            <div className="relative container mx-auto px-4 py-16">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
+                    {FOOTER_SECTIONS.map(({ title, path, links }) => (
+                        <div key={title} className="space-y-4">
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Link href={path} className="inline-block">
+                                            <Badge variant="outline" className="px-4 py-1 text-lg font-semibold hover:bg-white/10 transition-colors">
+                                                {title}
+                                            </Badge>
+                                        </Link>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>View all {title.toLowerCase()} news</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                            <ul className="space-y-2">
                                 {links.map(({ href, label }) => (
-                                    <li
-                                        key={href}
-                                        className="border-b border-zinc-200 dark:border-zinc-800 pb-2 last:border-0"
-                                    >
+                                    <li key={href}>
                                         <Link
                                             href={href}
-                                            className="text-zinc-600 dark:text-gray-400 hover:text-zinc-900 dark:hover:text-white text-sm block py-1"
+                                            className="text-sm text-gray-400 hover:text-white hover:underline underline-offset-4 transition-colors"
                                         >
                                             {label}
                                         </Link>
@@ -109,38 +112,37 @@ const Footer = () => {
                     ))}
                 </div>
 
-                <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800 grid grid-cols-1 gap-8">
-                    {ADDITIONAL_SECTIONS.map(({ title, path, links }) => (
-                        <div key={title} className="text-center">
-                            <Link
-                                href={path}
-                                className="inline-block font-bold text-lg mb-4 text-zinc-900 dark:text-white hover:text-zinc-600 dark:hover:text-gray-200 border-b border-transparent hover:border-current pb-1"
-                            >
-                                {title}
-                            </Link>
-                            <ul className="grid grid-cols-2 md:grid-cols-6 gap-4 border-l border-r border-zinc-200 dark:border-zinc-800 px-4">
-                                {links.map(({ href, label }) => (
-                                    <li
-                                        key={label}
-                                        className="border-b border-zinc-200 dark:border-zinc-800 pb-2"
-                                    >
-                                        <Link
-                                            href={href}
-                                            className="text-zinc-600 dark:text-gray-400 hover:text-zinc-900 dark:hover:text-white text-sm block py-1"
-                                        >
-                                            {label}
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    ))}
-                </div>
+                <Separator className="my-12 bg-white/10" />
 
-                <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800">
-                    <p className="text-zinc-600 dark:text-gray-400 text-sm text-center">
-                        © {new Date().getFullYear()} Goat News. All Rights
-                        Reserved.
+                {/* Social links and copyright */}
+                <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                    <div className="flex items-center space-x-4">
+                        <Button size="icon" variant="ghost" className="hover:bg-white/10">
+                            <Twitter className="w-5 h-5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="hover:bg-white/10">
+                            <Facebook className="w-5 h-5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="hover:bg-white/10">
+                            <Instagram className="w-5 h-5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="hover:bg-white/10">
+                            <Youtube className="w-5 h-5" />
+                        </Button>
+                    </div>
+                    <div className="flex items-center space-x-8">
+                        <Link href="/about" className="text-sm text-gray-400 hover:text-white transition-colors">
+                            About Us
+                        </Link>
+                        <Link href="/privacy" className="text-sm text-gray-400 hover:text-white transition-colors">
+                            Privacy Policy
+                        </Link>
+                        <Link href="/terms" className="text-sm text-gray-400 hover:text-white transition-colors">
+                            Terms of Service
+                        </Link>
+                    </div>
+                    <p className="text-sm text-gray-400">
+                        © {new Date().getFullYear()} Goat News. All rights reserved.
                     </p>
                 </div>
             </div>

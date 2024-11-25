@@ -8,29 +8,33 @@ export default function GoatNewsProfile() {
             role: 'Chief Executive Officer',
             bio: 'Former Wall Street Journal editor with 20+ years in journalism',
             image: '/team/gayu.jpg',
-            slug: 'gayu-baruwa',
+            social: { linkedin: '#', twitter: '#' },
+            slug: 'gayu-baruwa'
         },
         {
             name: 'Vidiawan Nabiel Arrasyid',
             role: 'Chief Technology Officer',
             bio: 'PhD in Computer Science, leading our digital transformation',
             image: '/team/gayu.jpg',
-            slug: 'vidiawan-nabiel-arrasyid',
+            social: { linkedin: '#', twitter: '#' },
+            slug: 'vidiawan-nabiel-arrasyid'
         },
         {
-            name: 'none',
-            role: 'none',
-            bio: 'none',
-            image: '/goat.png',
-            slug: '@',
+            name: 'Stevanza Gian Maheswara',
+            role: 'Editor-in-Chief',
+            bio: 'Award-winning journalist with expertise in investigative reporting',
+            image: '/team/gayu.jpg',
+            social: { linkedin: '#', twitter: '#' },
+            slug: 'stevanza-gian-maheswara'
         },
         {
-            name: '-',
-            role: '-',
-            bio: '-',
-            image: '/goat.png',
-            slug: '#',
-        },
+            name: 'M. Fadhil Abhista Daniswara',
+            role: 'Chief Content Officer',
+            bio: 'Digital media strategist with a background in multimedia journalism',
+            image: '/team/gayu.jpg',
+            social: { linkedin: '#', twitter: '#' },
+            slug: 'm-fadhil-abhista-daniswara'
+        }
     ];
 
     return (

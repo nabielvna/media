@@ -49,6 +49,7 @@ export type User = {
     email?: string | null;
     emailVerified?: Date | null;
     image?: string | null;
+    role?: string | null;
     password?: string | null;
     accounts: Account[];
     sessions: Session[];

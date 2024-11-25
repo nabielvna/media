@@ -3,6 +3,14 @@ import { Card } from '@/components/ui/card';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import {
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbPage,
+    BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 
 const VALID_CATEGORIES = [
     'politics',
@@ -40,7 +48,6 @@ const normalizeSubcategory = (
     const validSubcategories = CATEGORY_SUBCATEGORIES[category];
     const normalizedInput = deslugify(subcategorySlug);
 
-    // Find matching subcategory ignoring case
     return (
         validSubcategories.find(
             (sub) => sub.toLowerCase() === normalizedInput.toLowerCase()
@@ -66,22 +73,21 @@ type NewsDetail = Readonly<{
     }>;
 }>;
 
-type Params = Readonly<{
+type Params = {
     categories: string;
     subcategories: string;
     news: string;
-}>;
+};
 
-async function getNewsData(params: Params): Promise<NewsDetail> {
-    const { categories: category, subcategories, news: slug } = params;
+async function getNewsData(params: Promise<Params>): Promise<NewsDetail> {
+    const resolvedParams = await params;
+    const { categories: category, subcategories, news: slug } = resolvedParams;
     const lowerCategory = category.toLowerCase() as CategoryType;
 
-    // Validate category
     if (!VALID_CATEGORIES.includes(lowerCategory)) {
         notFound();
     }
 
-    // Validate and normalize subcategory
     const normalizedSubcategory = normalizeSubcategory(
         lowerCategory,
         subcategories
@@ -90,10 +96,7 @@ async function getNewsData(params: Params): Promise<NewsDetail> {
         notFound();
     }
 
-    // Format title from slug
     const title = deslugify(slug);
-
-    // Get random subcategories for related stories
     const getRandomSubcategory = () => {
         const subcategories = CATEGORY_SUBCATEGORIES[lowerCategory];
         return subcategories[Math.floor(Math.random() * subcategories.length)];
@@ -101,7 +104,10 @@ async function getNewsData(params: Params): Promise<NewsDetail> {
 
     return {
         title,
-        content: `Lorem ipsum dolor sit amet...`, // Your content here
+        content: `Lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia,
+        molestiae quas vel sint commodi repudiandae consequuntur voluptatum laborum
+        numquam blanditiis harum quisquam eius sed odit fugiat iusto fuga praesentium
+        optio, eaque rerum! Provident similique accusantium nemo autem...`,
         category: category.charAt(0).toUpperCase() + category.slice(1),
         subcategory: normalizedSubcategory,
         author: 'John Doe',
@@ -114,7 +120,6 @@ async function getNewsData(params: Params): Promise<NewsDetail> {
         }),
         image: '/api/placeholder/1200/600',
         tags: [
-            // Sekarang menggunakan array biasa, bukan ReadonlyArray
             normalizedSubcategory,
             category.charAt(0).toUpperCase() + category.slice(1),
             'Featured',
@@ -132,10 +137,12 @@ async function getNewsData(params: Params): Promise<NewsDetail> {
 }
 
 export async function generateMetadata({
-    params,
-}: Readonly<{ params: Params }>): Promise<Metadata> {
+    params: paramsPromise,
+}: {
+    params: Promise<Params>;
+}): Promise<Metadata> {
     try {
-        const newsData = await getNewsData(params);
+        const newsData = await getNewsData(paramsPromise);
         const description = newsData.content.substring(0, 160) + '...';
 
         return {
@@ -147,8 +154,7 @@ export async function generateMetadata({
                 type: 'article',
                 authors: [newsData.author],
                 publishedTime: new Date().toISOString(),
-                section: newsData.category,
-                tags: [...newsData.tags], // Spread operator untuk membuat array baru
+                section: newsData.category
             },
         };
     } catch {
@@ -166,34 +172,41 @@ const ShareButton = ({ children }: { children: React.ReactNode }) => (
 );
 
 export default async function NewsPage({
-    params,
-}: Readonly<{ params: Params }>) {
-    const newsData = await getNewsData(params);
+    params: paramsPromise,
+}: {
+    params: Promise<Params>;
+}) {
+    const params = await paramsPromise;
+    const newsData = await getNewsData(paramsPromise);
 
     return (
         <div className="min-h-screen pt-24 pb-8">
             <article className="container mx-auto px-4">
                 {/* Breadcrumb Navigation */}
                 <div className="max-w-4xl mx-auto mb-8">
-                    <nav className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-                        <Link
-                            href={`/${params.categories}`}
-                            className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                        >
-                            {newsData.category}
-                        </Link>
-                        <span>/</span>
-                        <Link
-                            href={`/${params.categories}/${params.subcategories}`}
-                            className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                        >
-                            {newsData.subcategory}
-                        </Link>
-                        <span>/</span>
-                        <span className="text-black dark:text-white">
-                            Article
-                        </span>
-                    </nav>
+                    <Breadcrumb>
+                        <BreadcrumbList>
+                            <BreadcrumbItem>
+                                <BreadcrumbLink href="/">Home</BreadcrumbLink>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem>
+                                <BreadcrumbLink href={`/${newsData.category.toLowerCase()}`}>
+                                    {newsData.category}
+                                </BreadcrumbLink>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem>
+                                <BreadcrumbLink href={`/${newsData.category.toLowerCase()}/${params.subcategories}`}>
+                                    {newsData.subcategory}
+                                </BreadcrumbLink>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem>
+                                <BreadcrumbPage>{newsData.title}</BreadcrumbPage>
+                            </BreadcrumbItem>
+                        </BreadcrumbList>
+                    </Breadcrumb>
                 </div>
 
                 {/* Article Header */}
@@ -270,7 +283,7 @@ export default async function NewsPage({
                                 ))}
                             </div>
 
-                            {/* Share buttons - These would need proper implementation */}
+                            {/* Share buttons */}
                             <div className="flex items-center gap-2">
                                 <ShareButton>Share</ShareButton>
                                 <ShareButton>Tweet</ShareButton>
@@ -289,7 +302,7 @@ export default async function NewsPage({
                         {newsData.relatedStories.map((story) => (
                             <Link
                                 key={story.slug}
-                                href={`/${params.categories}/${story.subcategory}/${story.slug}`}
+                                href={`/${newsData.category.toLowerCase()}/${story.subcategory}/${story.slug}`}
                             >
                                 <Card className="group h-full p-4 hover:shadow-lg transition-all duration-300 bg-zinc-50 dark:bg-zinc-900">
                                     <div className="aspect-video bg-zinc-200 dark:bg-zinc-800 rounded-lg mb-4" />
