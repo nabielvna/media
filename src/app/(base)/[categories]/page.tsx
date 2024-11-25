@@ -15,26 +15,8 @@ import { notFound } from 'next/navigation';
 import { memo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-
-const VALID_CATEGORIES = [
-    'politics',
-    'business',
-    'tech',
-    'sports',
-    'entertainment',
-    'lifestyle',
-] as const;
-
-const CATEGORY_SUBCATEGORIES: Record<CategoryType, ReadonlyArray<string>> = {
-    politics: ['National', 'International'],
-    business: ['Macro', 'Financial Exchange', 'Real Sector'],
-    tech: ['Gadgets', 'Electronics', 'Telco'],
-    sports: ['Soccer', 'Boxing', 'All Sport'],
-    entertainment: ['Movies', 'Music', 'Celebrity'],
-    lifestyle: ['Health', 'Travel', 'Food'],
-};
-
-type CategoryType = (typeof VALID_CATEGORIES)[number];
+import { prisma } from '@/lib/prisma';
+import type { Category, SubCategory } from '@/types';
 
 type NewsStory = Readonly<{
     title: string;
@@ -46,20 +28,21 @@ type NewsStory = Readonly<{
 
 type NewsData = Readonly<{
     category: string;
+    categoryPath: string;
     featuredStory: NewsStory;
     latestNews: ReadonlyArray<NewsStory>;
-    subcategories: ReadonlyArray<string>;
+    subcategories: SubCategory[];
 }>;
 
 type StoryCardProps = Readonly<{
     story: NewsStory;
     className?: string;
-    category: string;
+    categoryPath: string;
     featured?: boolean;
 }>;
 
 const StoryCard = memo(
-    ({ story, className = '', category, featured = false }: StoryCardProps) => {
+    ({ story, className = '', categoryPath, featured = false }: StoryCardProps) => {
         const newsSlug = encodeURIComponent(
             story.title.toLowerCase().replace(/\s+/g, '-')
         );
@@ -69,7 +52,7 @@ const StoryCard = memo(
 
         if (featured) {
             return (
-                <Link href={`/${category}/${subcategorySlug}/${newsSlug}`}>
+                <Link href={`/${categoryPath}/${subcategorySlug}/${newsSlug}`}>
                     <Card className={`group relative h-[600px] overflow-hidden ${className}`}>
                         <CardContent className="p-0 h-full">
                             {story.image && (
@@ -109,7 +92,7 @@ const StoryCard = memo(
         }
 
         return (
-            <Link href={`/${category}/${subcategorySlug}/${newsSlug}`}>
+            <Link href={`/${categoryPath}/${subcategorySlug}/${newsSlug}`}>
                 <Card className={`group overflow-hidden ${className}`}>
                     <CardContent className="p-0">
                         {story.image && (
@@ -153,47 +136,61 @@ const StoryCard = memo(
 
 StoryCard.displayName = 'StoryCard';
 
-function validateCategory(category: string): asserts category is CategoryType {
-    if (!VALID_CATEGORIES.includes(category.toLowerCase() as CategoryType)) {
+async function validateCategory(categoryPath: string): Promise<Category> {
+    const category = await prisma.category.findUnique({
+        where: { path: categoryPath },
+        include: {
+            subCategories: {
+                include: {
+                    category: true,
+                    news: true
+                }
+            }
+        }
+    });
+
+    if (!category) {
         notFound();
     }
+
+    return category as Category;
 }
 
-async function getData(categoryParam: string): Promise<NewsData> {
-    const category = categoryParam.toLowerCase();
-    validateCategory(category);
-
-    const capitalizedCategory =
-        category.charAt(0).toUpperCase() + category.slice(1);
-    const subcategories = CATEGORY_SUBCATEGORIES[category];
+async function getData(categoryPath: string): Promise<NewsData> {
+    const category = await validateCategory(categoryPath);
 
     const getRandomSubcategory = () => {
-        return subcategories[Math.floor(Math.random() * subcategories.length)];
+        const randomIndex = Math.floor(Math.random() * category.subCategories.length);
+        return category.subCategories[randomIndex].title;
     };
 
     return {
-        category: capitalizedCategory,
+        category: category.title,
+        categoryPath: category.path,
         featuredStory: {
-            title: `Featured ${capitalizedCategory} Story`,
+            title: `Featured ${category.title} Story`,
             content:
                 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Breaking news and latest updates from around the world. Stay informed with our comprehensive coverage.',
             image: '/api/placeholder/1200/600',
             subcategory: getRandomSubcategory(),
         },
         latestNews: Array.from({ length: 6 }, (_, i) => ({
-            title: `${capitalizedCategory} Story ${i + 1}`,
+            title: `${category.title} Story ${i + 1}`,
             content:
                 'Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat...',
             image: '/api/placeholder/400/400',
             subcategory: getRandomSubcategory(),
         })),
-        subcategories,
+        subcategories: category.subCategories,
     };
 }
 
-export function generateStaticParams() {
-    return VALID_CATEGORIES.map((category) => ({
-        categories: category,
+export async function generateStaticParams() {
+    const categories = await prisma.category.findMany({
+        select: { path: true }
+    });
+    return categories.map((category) => ({
+        categories: category.path,
     }));
 }
 
@@ -208,14 +205,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     try {
         const params = await paramsPromise;
-        const category = params.categories.toLowerCase();
-        validateCategory(category);
-        const capitalizedCategory =
-            category.charAt(0).toUpperCase() + category.slice(1);
+        const category = await validateCategory(params.categories);
 
         return {
-            title: `${capitalizedCategory} News - Latest Updates | GOAT`,
-            description: `Stay updated with the latest ${category} news, breaking stories, and in-depth coverage.`,
+            title: `${category.title} News - Latest Updates | GOAT`,
+            description: `Stay updated with the latest ${category.title.toLowerCase()} news, breaking stories, and in-depth coverage.`,
         };
     } catch {
         return {
@@ -256,24 +250,19 @@ export default async function CategoryPage({
 
                 <ScrollArea className="w-full whitespace-nowrap pb-3">
                     <div className="flex gap-2">
-                        {data.subcategories.map((subcategory) => {
-                            const slug = encodeURIComponent(
-                                subcategory.toLowerCase().replace(/\s+/g, '-')
-                            );
-                            return (
-                                <Link
-                                    key={subcategory}
-                                    href={`/${data.category.toLowerCase()}/${slug}`}
+                        {data.subcategories.map((subcategory) => (
+                            <Link
+                                key={subcategory.id}
+                                href={`/${data.categoryPath}/${subcategory.path}`}
+                            >
+                                <Badge
+                                    variant="outline"
+                                    className="px-4 py-2 font-medium text-xm tracking-wide hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors"
                                 >
-                                    <Badge
-                                        variant="outline"
-                                        className="px-4 py-2 font-medium text-xm tracking-wide hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors"
-                                    >
-                                        {subcategory}
-                                    </Badge>
-                                </Link>
-                            );
-                        })}
+                                    {subcategory.title}
+                                </Badge>
+                            </Link>
+                        ))}
                     </div>
                     <ScrollBar orientation="horizontal" />
                 </ScrollArea>
@@ -283,7 +272,7 @@ export default async function CategoryPage({
                 <StoryCard
                     story={data.featuredStory}
                     className="mb-12"
-                    category={data.category.toLowerCase()}
+                    categoryPath={data.categoryPath}
                     featured={true}
                 />
 
@@ -292,7 +281,7 @@ export default async function CategoryPage({
                         <StoryCard
                             key={index}
                             story={story}
-                            category={data.category.toLowerCase()}
+                            categoryPath={data.categoryPath}
                         />
                     ))}
                 </div>

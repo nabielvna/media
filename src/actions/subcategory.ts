@@ -3,17 +3,14 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import type { Category, SubCategory } from '@/types';
+import type { SubCategory } from '@/types';
 import { Prisma } from '@prisma/client';
 
-// Updated schemas to remove path since it will be auto-generated
-const CategorySchema = z.object({
+// Validation schema for subcategory
+const SubCategorySchema = z.object({
     title: z.string().min(1).max(100),
     description: z.string().min(1).max(200),
-});
-
-const SubCategorySchema = CategorySchema.extend({
-    categoryId: z.string().min(1),
+    categoryId: z.string().min(1)
 });
 
 // Path generator utility class
@@ -72,23 +69,20 @@ class PathGenerator {
 
 // Helper function to get all existing paths
 async function getAllExistingPaths(): Promise<string[]> {
-    const [categories, subCategories] = await Promise.all([
-        prisma.category.findMany({ select: { path: true } }),
-        prisma.subCategory.findMany({ select: { path: true } })
-    ]);
-
-    return [
-        ...categories.map(c => c.path),
-        ...subCategories.map(s => s.path)
-    ];
+    const subCategories = await prisma.subCategory.findMany({
+        select: { path: true }
+    });
+    return subCategories.map(s => s.path);
 }
 
 function handleError(error: unknown): never {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
         switch (error.code) {
             case 'P2002':
-                throw new Error('A category with this path already exists');
+                throw new Error('A subcategory with this path already exists');
             case 'P2025':
+                throw new Error('Subcategory not found');
+            case 'P2003':
                 throw new Error('Category not found');
             default:
                 throw new Error(`Database error: ${error.code}`);
@@ -102,54 +96,32 @@ function handleError(error: unknown): never {
     }
 }
 
-export async function getCategories(): Promise<Category[]> {
+export async function getSubCategories(categoryId?: string): Promise<SubCategory[]> {
     try {
-        const categories = await prisma.category.findMany({
+        const where = categoryId ? { categoryId } : undefined;
+        const subCategories = await prisma.subCategory.findMany({
+            where,
             include: {
-                subCategories: {
-                    include: {
-                        news: true,
-                        category: true,
-                    },
-                },
-            },
+                category: true,
+                news: true
+            }
         });
-        return categories as Category[];
+        return subCategories as SubCategory[];
     } catch (error) {
         handleError(error);
     }
 }
 
-export async function createCategory(
-    data: z.infer<typeof CategorySchema>
-): Promise<Category> {
+export async function getSubCategory(id: string): Promise<SubCategory | null> {
     try {
-        const validation = CategorySchema.safeParse(data);
-        if (!validation.success) {
-            throw new z.ZodError(validation.error.errors);
-        }
-
-        const existingPaths = await getAllExistingPaths();
-        const pathGenerator = new PathGenerator(existingPaths);
-        const path = pathGenerator.generatePath(data.title);
-
-        const category = await prisma.category.create({
-            data: {
-                ...validation.data,
-                path,
-            },
+        const subCategory = await prisma.subCategory.findUnique({
+            where: { id },
             include: {
-                subCategories: {
-                    include: {
-                        news: true,
-                        category: true,
-                    },
-                },
-            },
+                category: true,
+                news: true
+            }
         });
-
-        revalidatePath('/categories');
-        return category as Category;
+        return subCategory as SubCategory;
     } catch (error) {
         handleError(error);
     }
@@ -164,6 +136,14 @@ export async function createSubCategory(
             throw new z.ZodError(validation.error.errors);
         }
 
+        // Verify that the category exists
+        const category = await prisma.category.findUnique({
+            where: { id: data.categoryId }
+        });
+        if (!category) {
+            throw new Error('Category not found');
+        }
+
         const existingPaths = await getAllExistingPaths();
         const pathGenerator = new PathGenerator(existingPaths);
         const path = pathGenerator.generatePath(data.title);
@@ -171,64 +151,16 @@ export async function createSubCategory(
         const subCategory = await prisma.subCategory.create({
             data: {
                 ...validation.data,
-                path,
+                path
             },
             include: {
-                news: true,
-                category: {
-                    include: {
-                        subCategories: true,
-                    },
-                },
-            },
+                category: true,
+                news: true
+            }
         });
 
-        revalidatePath('/categories');
+        revalidatePath('/subcategories');
         return subCategory as SubCategory;
-    } catch (error) {
-        handleError(error);
-    }
-}
-
-export async function updateCategory(
-    id: string,
-    data: z.infer<typeof CategorySchema>
-): Promise<Category> {
-    try {
-        const validation = CategorySchema.safeParse(data);
-        if (!validation.success) {
-            throw new z.ZodError(validation.error.errors);
-        }
-
-        const existingPaths = await getAllExistingPaths();
-        const currentCategory = await prisma.category.findUnique({
-            where: { id },
-            select: { path: true }
-        });
-
-        // Remove current path from existing paths to allow keeping same path if title hasn't changed
-        const filteredPaths = existingPaths.filter(p => p !== currentCategory?.path);
-        const pathGenerator = new PathGenerator(filteredPaths);
-        const path = pathGenerator.generatePath(data.title);
-
-        const category = await prisma.category.update({
-            where: { id },
-            data: {
-                ...validation.data,
-                path,
-            },
-            include: {
-                subCategories: {
-                    include: {
-                        news: true,
-                        category: true,
-                    },
-                },
-            },
-        });
-
-        revalidatePath('/categories');
-        return category as Category;
     } catch (error) {
         handleError(error);
     }
@@ -242,6 +174,14 @@ export async function updateSubCategory(
         const validation = SubCategorySchema.safeParse(data);
         if (!validation.success) {
             throw new z.ZodError(validation.error.errors);
+        }
+
+        // Verify that the category exists
+        const category = await prisma.category.findUnique({
+            where: { id: data.categoryId }
+        });
+        if (!category) {
+            throw new Error('Category not found');
         }
 
         const existingPaths = await getAllExistingPaths();
@@ -259,41 +199,16 @@ export async function updateSubCategory(
             where: { id },
             data: {
                 ...validation.data,
-                path,
+                path
             },
             include: {
-                news: true,
-                category: {
-                    include: {
-                        subCategories: true,
-                    },
-                },
-            },
+                category: true,
+                news: true
+            }
         });
 
-        revalidatePath('/categories');
+        revalidatePath('/subcategories');
         return subCategory as SubCategory;
-    } catch (error) {
-        handleError(error);
-    }
-}
-
-export async function deleteCategory(id: string): Promise<Category> {
-    try {
-        const category = await prisma.category.delete({
-            where: { id },
-            include: {
-                subCategories: {
-                    include: {
-                        news: true,
-                        category: true,
-                    },
-                },
-            },
-        });
-
-        revalidatePath('/categories');
-        return category as Category;
     } catch (error) {
         handleError(error);
     }
@@ -304,16 +219,12 @@ export async function deleteSubCategory(id: string): Promise<SubCategory> {
         const subCategory = await prisma.subCategory.delete({
             where: { id },
             include: {
-                news: true,
-                category: {
-                    include: {
-                        subCategories: true,
-                    },
-                },
-            },
+                category: true,
+                news: true
+            }
         });
 
-        revalidatePath('/categories');
+        revalidatePath('/subcategories');
         return subCategory as SubCategory;
     } catch (error) {
         handleError(error);

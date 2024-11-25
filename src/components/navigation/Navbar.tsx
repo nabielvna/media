@@ -42,6 +42,8 @@ import {
     CommandEmpty
 } from "@/components/ui/command";
 import { DialogTitle } from '@/components/ui/dialog';
+import { getCategories } from '@/actions/category';
+import type { Category } from '@/types';
 
 const Navbar = () => {
     const pathname = usePathname();
@@ -50,22 +52,39 @@ const Navbar = () => {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const loginStatus = localStorage.getItem('isLoggedIn');
         const userRole = localStorage.getItem('userRole');
         setIsLoggedIn(loginStatus === 'true');
         setIsAdmin(userRole === 'admin');
+
+        // Fetch categories using server action
+        const fetchCategories = async () => {
+            try {
+                const data = await getCategories();
+                if (data) {
+                    setCategories(data);
+                }
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchCategories();
     }, []);
 
+    // Transform categories into menu items
     const menuItems = [
         { label: 'Home', href: '/' },
-        { label: 'Politics', href: '/politics' },
-        { label: 'Business', href: '/business' },
-        { label: 'Tech', href: '/tech' },
-        { label: 'Sports', href: '/sports' },
-        { label: 'Entertainment', href: '/entertainment' },
-        { label: 'Lifestyle', href: '/lifestyle' },
+        ...categories.map(category => ({
+            label: category.title,
+            href: `/${category.path}`,
+        }))
     ];
 
     const getCurrentPageLabel = () => {
@@ -200,20 +219,24 @@ const Navbar = () => {
                     {/* Center: Navigation Menu */}
                     <div className="hidden lg:flex items-center justify-center flex-1">
                         <div className="flex items-center gap-1">
-                            {menuItems.map((item) => {
-                                const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
-                                return (
-                                    <Button
-                                        key={item.label}
-                                        variant={isActive ? "secondary" : "ghost"}
-                                        size="sm"
-                                        className="text-sm"
-                                        asChild
-                                    >
-                                        <Link href={item.href}>{item.label}</Link>
-                                    </Button>
-                                );
-                            })}
+                            {isLoading ? (
+                                <div className="h-9 w-64 bg-muted animate-pulse rounded-md" />
+                            ) : (
+                                menuItems.map((item) => {
+                                    const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+                                    return (
+                                        <Button
+                                            key={item.label}
+                                            variant={isActive ? "secondary" : "ghost"}
+                                            size="sm"
+                                            className="text-sm"
+                                            asChild
+                                        >
+                                            <Link href={item.href}>{item.label}</Link>
+                                        </Button>
+                                    );
+                                })
+                            )}
                         </div>
                     </div>
 
@@ -256,21 +279,27 @@ const Navbar = () => {
                                     <SheetTitle>Menu</SheetTitle>
                                 </SheetHeader>
                                 <div className="flex flex-col gap-4 mt-4">
-                                    {menuItems.map((item) => {
-                                        const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
-                                        return (
-                                            <Button
-                                                key={item.label}
-                                                variant={isActive ? "secondary" : "ghost"}
-                                                className="w-full justify-start"
-                                                asChild
-                                            >
-                                                <Link href={item.href} onClick={() => setIsMenuOpen(false)}>
-                                                    {item.label}
-                                                </Link>
-                                            </Button>
-                                        );
-                                    })}
+                                    {isLoading ? (
+                                        Array(5).fill(0).map((_, i) => (
+                                            <div key={i} className="h-10 bg-muted animate-pulse rounded-md" />
+                                        ))
+                                    ) : (
+                                        menuItems.map((item) => {
+                                            const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+                                            return (
+                                                <Button
+                                                    key={item.label}
+                                                    variant={isActive ? "secondary" : "ghost"}
+                                                    className="w-full justify-start"
+                                                    asChild
+                                                >
+                                                    <Link href={item.href} onClick={() => setIsMenuOpen(false)}>
+                                                        {item.label}
+                                                    </Link>
+                                                </Button>
+                                            );
+                                        })
+                                    )}
 
                                     {isLoggedIn && (
                                         <>

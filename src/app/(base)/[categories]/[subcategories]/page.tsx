@@ -6,6 +6,8 @@ import { notFound } from 'next/navigation';
 import { memo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { getSubCategories } from '@/actions/subcategory';
+import type { SubCategory } from '@/types';
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -15,37 +17,11 @@ import {
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 
-const VALID_CATEGORIES = [
-    'politics',
-    'business',
-    'tech',
-    'sports',
-    'entertainment',
-    'lifestyle',
-] as const;
-
-const CATEGORY_SUBCATEGORIES: Record<CategoryType, ReadonlyArray<string>> = {
-    politics: ['National', 'International'],
-    business: ['Macro', 'Financial Exchange', 'Real Sector'],
-    tech: ['Gadgets', 'Electronics', 'Telco'],
-    sports: ['Soccer', 'Boxing', 'All Sport'],
-    entertainment: ['Movies', 'Music', 'Celebrity'],
-    lifestyle: ['Health', 'Travel', 'Food'],
-};
-
-type CategoryType = (typeof VALID_CATEGORIES)[number];
-
 type NewsStory = Readonly<{
     title: string;
     content: string;
     image?: string;
     publishDate: string;
-}>;
-
-type SubcategoryData = Readonly<{
-    category: string;
-    subcategory: string;
-    stories: ReadonlyArray<NewsStory>;
 }>;
 
 type StoryCardProps = Readonly<{
@@ -144,26 +120,26 @@ type Params = {
 async function getData(
     category: string,
     subcategory: string
-): Promise<SubcategoryData> {
-    const lowerCategory = category.toLowerCase() as CategoryType;
+): Promise<{ subCategory: SubCategory; stories: NewsStory[] }> {
+    // Get all subcategories to validate the path
+    const subCategories = await getSubCategories();
+    const decodedPath = decodeURIComponent(subcategory);
 
-    if (!VALID_CATEGORIES.includes(lowerCategory)) {
+    // Find the matching subcategory
+    const subCategory = subCategories.find(sub => sub.path === decodedPath);
+
+    if (!subCategory) {
         notFound();
     }
 
-    const subcategories = CATEGORY_SUBCATEGORIES[lowerCategory];
-    const decodedSubcategory = decodeURIComponent(subcategory);
-    const normalizedSubcategory = decodedSubcategory
-        .split('-')
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-
-    if (!subcategories.includes(normalizedSubcategory)) {
+    // Validate that the subcategory belongs to the correct category
+    if (subCategory.category.path !== category.toLowerCase()) {
         notFound();
     }
 
+    // Generate dummy stories for now
     const stories = Array.from({ length: 9 }, (_, i) => ({
-        title: `${normalizedSubcategory} Story ${i + 1}`,
+        title: `${subCategory.title} Story ${i + 1}`,
         content:
             'Lorem ipsum dolor sit amet consectetur adipisicing elit. Breaking news and latest updates from around the world. Stay informed with our comprehensive coverage.',
         image: '/api/placeholder/400/400',
@@ -175,8 +151,7 @@ async function getData(
     }));
 
     return {
-        category: category.charAt(0).toUpperCase() + category.slice(1),
-        subcategory: normalizedSubcategory,
+        subCategory,
         stories,
     };
 }
@@ -188,11 +163,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     try {
         const params = await paramsPromise;
-        const data = await getData(params.categories, params.subcategories);
+        const { subCategory } = await getData(params.categories, params.subcategories);
 
         return {
-            title: `${data.subcategory} News - ${data.category} - GOAT`,
-            description: `Latest ${data.subcategory} news in ${data.category}`,
+            title: `${subCategory.title} News - ${subCategory.category.title} - GOAT`,
+            description: subCategory.description,
         };
     } catch {
         return {
@@ -208,8 +183,8 @@ export default async function SubcategoryPage({
     params: Promise<Params>;
 }) {
     const params = await paramsPromise;
-    const data = await getData(params.categories, params.subcategories);
-    const [featuredStory, ...otherStories] = data.stories;
+    const { subCategory, stories } = await getData(params.categories, params.subcategories);
+    const [featuredStory, ...otherStories] = stories;
 
     return (
         <div className="min-h-screen py-24">
@@ -221,30 +196,30 @@ export default async function SubcategoryPage({
                         </BreadcrumbItem>
                         <BreadcrumbSeparator />
                         <BreadcrumbItem>
-                            <BreadcrumbLink href={`/${data.category.toLowerCase()}`}>
-                                {data.category}
+                            <BreadcrumbLink href={`/${subCategory.category.path}`}>
+                                {subCategory.category.title}
                             </BreadcrumbLink>
                         </BreadcrumbItem>
                         <BreadcrumbSeparator />
                         <BreadcrumbItem>
-                            <BreadcrumbPage>{data.subcategory}</BreadcrumbPage>
+                            <BreadcrumbPage>{subCategory.title}</BreadcrumbPage>
                         </BreadcrumbItem>
                     </BreadcrumbList>
                 </Breadcrumb>
 
                 <h1 className="text-4xl font-bold mb-2">
-                    {data.subcategory}
+                    {subCategory.title}
                 </h1>
                 <p className="text-lg text-muted-foreground">
-                    Latest updates from {data.category} - {data.subcategory}
+                    {subCategory.description}
                 </p>
             </header>
 
             <main className="container mx-auto">
                 <StoryCard
                     story={featuredStory}
-                    category={data.category.toLowerCase()}
-                    subcategory={params.subcategories}
+                    category={subCategory.category.path}
+                    subcategory={subCategory.path}
                     featured={true}
                 />
 
@@ -253,8 +228,8 @@ export default async function SubcategoryPage({
                         <StoryCard
                             key={index}
                             story={story}
-                            category={data.category.toLowerCase()}
-                            subcategory={params.subcategories}
+                            category={subCategory.category.path}
+                            subcategory={subCategory.path}
                         />
                     ))}
                 </div>
