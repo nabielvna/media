@@ -79,7 +79,7 @@ const NewsPage = () => {
     const [selectedCategory, setSelectedCategory] = useState('');
 
     return (
-        <div className="pt-16 space-y-6">
+        <div className="space-y-6">
             {/* Header Section */}
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">

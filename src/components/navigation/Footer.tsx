@@ -1,15 +1,14 @@
 import React from 'react';
 import Link from 'next/link';
-import { Twitter, Facebook, Instagram, Youtube } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const FOOTER_SECTIONS = [
     {
@@ -25,7 +24,10 @@ const FOOTER_SECTIONS = [
         path: '/business',
         links: [
             { href: '/business/macro', label: 'Macro' },
-            { href: '/business/financial-exchange', label: 'Financial Exchange' },
+            {
+                href: '/business/financial-exchange',
+                label: 'Financial Exchange',
+            },
             { href: '/business/real-sector', label: 'Real Sector' },
         ],
     },
@@ -69,14 +71,14 @@ const FOOTER_SECTIONS = [
 
 const Footer = () => {
     return (
-        <footer className="relative bg-black text-white overflow-hidden">
-            {/* Decorative background pattern
-            <div className="absolute inset-0 bg-black" />
-            <div className="absolute inset-0" style={{
-                backgroundImage: 'radial-gradient(circle at 20px 20px, rgba(255, 255, 255, 0.2) 2%, transparent 1%)',
-                backgroundSize: '50px 50px'
-            }} /> */}
-
+        <footer
+            className={cn(
+                'relative overflow-hidden',
+                'bg-white dark:bg-black',
+                'text-zinc-900 dark:text-white',
+                'border-t border-border'
+            )}
+        >
             {/* Main footer content */}
             <div className="relative container mx-auto px-4 py-16">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
@@ -85,14 +87,26 @@ const Footer = () => {
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Link href={path} className="inline-block">
-                                            <Badge variant="outline" className="px-4 py-1 text-lg font-semibold hover:bg-white/10 transition-colors">
+                                        <Link
+                                            href={path}
+                                            className="inline-block"
+                                        >
+                                            <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                    'px-4 py-1 text-lg font-semibold transition-colors',
+                                                    'hover:bg-zinc-200 dark:hover:bg-white/10',
+                                                    'border-zinc-300 dark:border-zinc-700'
+                                                )}
+                                            >
                                                 {title}
                                             </Badge>
                                         </Link>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>View all {title.toLowerCase()} news</p>
+                                        <p>
+                                            View all {title.toLowerCase()} news
+                                        </p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
@@ -101,7 +115,12 @@ const Footer = () => {
                                     <li key={href}>
                                         <Link
                                             href={href}
-                                            className="text-sm text-gray-400 hover:text-white hover:underline underline-offset-4 transition-colors"
+                                            className={cn(
+                                                'text-sm transition-colors',
+                                                'text-zinc-600 hover:text-zinc-900',
+                                                'dark:text-zinc-400 dark:hover:text-white',
+                                                'hover:underline underline-offset-4'
+                                            )}
                                         >
                                             {label}
                                         </Link>
@@ -112,37 +131,45 @@ const Footer = () => {
                     ))}
                 </div>
 
-                <Separator className="my-12 bg-white/10" />
+                <Separator className="my-12 bg-zinc-200 dark:bg-white/10" />
 
-                {/* Social links and copyright */}
+                {/* Company info and copyright */}
                 <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-                    <div className="flex items-center space-x-4">
-                        <Button size="icon" variant="ghost" className="hover:bg-white/10">
-                            <Twitter className="w-5 h-5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="hover:bg-white/10">
-                            <Facebook className="w-5 h-5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="hover:bg-white/10">
-                            <Instagram className="w-5 h-5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="hover:bg-white/10">
-                            <Youtube className="w-5 h-5" />
-                        </Button>
-                    </div>
                     <div className="flex items-center space-x-8">
-                        <Link href="/about" className="text-sm text-gray-400 hover:text-white transition-colors">
+                        <Link
+                            href="/about"
+                            className={cn(
+                                'text-sm transition-colors',
+                                'text-zinc-600 hover:text-zinc-900',
+                                'dark:text-zinc-400 dark:hover:text-white'
+                            )}
+                        >
                             About Us
                         </Link>
-                        <Link href="/privacy" className="text-sm text-gray-400 hover:text-white transition-colors">
+                        <Link
+                            href="/privacy"
+                            className={cn(
+                                'text-sm transition-colors',
+                                'text-zinc-600 hover:text-zinc-900',
+                                'dark:text-zinc-400 dark:hover:text-white'
+                            )}
+                        >
                             Privacy Policy
                         </Link>
-                        <Link href="/terms" className="text-sm text-gray-400 hover:text-white transition-colors">
+                        <Link
+                            href="/terms"
+                            className={cn(
+                                'text-sm transition-colors',
+                                'text-zinc-600 hover:text-zinc-900',
+                                'dark:text-zinc-400 dark:hover:text-white'
+                            )}
+                        >
                             Terms of Service
                         </Link>
                     </div>
-                    <p className="text-sm text-gray-400">
-                        © {new Date().getFullYear()} Goat News. All rights reserved.
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        © {new Date().getFullYear()} Goat News. All rights
+                        reserved.
                     </p>
                 </div>
             </div>

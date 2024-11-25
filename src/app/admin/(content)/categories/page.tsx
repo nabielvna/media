@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 import {
     PlusCircle,
     Search,
@@ -37,209 +38,275 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useRouter } from 'next/navigation';
+import type { Category, SubCategory } from '@/types';
+import {
+    getCategories,
+    createCategory,
+    createSubCategory,
+    updateCategory,
+    updateSubCategory,
+    deleteCategory,
+    deleteSubCategory,
+} from '@/actions/category';
 
-import type { Category } from '@/types';
-
-const categories: Category[] = [
-    {
-        id: 'clq1234567890',
-        path: 'politics',
-        title: 'Politics',
-        description: 'News about domestic and international politics',
-        updatedAt: '2024-11-24T10:00:00Z',
-        createdAt: '2024-11-24T10:00:00Z',
-        subCategories: [
-            {
-                id: 'clq1234567891',
-                path: 'national-politics',
-                title: 'National Politics',
-                description: 'Domestic political news',
-                updatedAt: '2024-11-24T10:00:00Z',
-                createdAt: '2024-11-24T10:00:00Z',
-                categoryId: 'clq1234567890',
-                category: {
-                    id: 'clq1234567890',
-                    path: 'politics',
-                    title: 'Politics',
-                    description:
-                        'News about domestic and international politics',
-                    updatedAt: '2024-11-24T10:00:00Z',
-                    createdAt: '2024-11-24T10:00:00Z',
-                    subCategories: [], // Avoid circular reference
-                },
-                news: [], // Empty array for news
-            },
-            {
-                id: 'clq1234567892',
-                path: 'international-politics',
-                title: 'International Politics',
-                description: 'International political news',
-                updatedAt: '2024-11-24T10:00:00Z',
-                createdAt: '2024-11-24T10:00:00Z',
-                categoryId: 'clq1234567890',
-                category: {
-                    id: 'clq1234567890',
-                    path: 'politics',
-                    title: 'Politics',
-                    description:
-                        'News about domestic and international politics',
-                    updatedAt: '2024-11-24T10:00:00Z',
-                    createdAt: '2024-11-24T10:00:00Z',
-                    subCategories: [], // Avoid circular reference
-                },
-                news: [], // Empty array for news
-            },
-        ],
-    },
-    {
-        id: 'clq1234567893',
-        path: 'technology',
-        title: 'Technology',
-        description: 'News about technological developments',
-        updatedAt: '2024-11-24T09:30:00Z',
-        createdAt: '2024-11-24T09:30:00Z',
-        subCategories: [
-            {
-                id: 'clq1234567894',
-                path: 'gadget',
-                title: 'Gadgets',
-                description: 'News about gadgets and technological devices',
-                updatedAt: '2024-11-24T09:30:00Z',
-                createdAt: '2024-11-24T09:30:00Z',
-                categoryId: 'clq1234567893',
-                category: {
-                    id: 'clq1234567893',
-                    path: 'technology',
-                    title: 'Technology',
-                    description: 'News about technological developments',
-                    updatedAt: '2024-11-24T09:30:00Z',
-                    createdAt: '2024-11-24T09:30:00Z',
-                    subCategories: [], // Avoid circular reference
-                },
-                news: [], // Empty array for news
-            },
-        ],
-    },
-];
-
+// Utility function for form fields
 const FormField = ({
     label,
     id,
     maxLength,
     isTextarea = false,
+    value,
+    onChange,
+    error,
 }: {
     label: string;
     id: string;
     maxLength: number;
     isTextarea?: boolean;
+    value: string;
+    onChange: (value: string) => void;
+    error?: string;
 }) => (
     <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor={id} className="text-right text-muted-foreground">
             {label}
         </Label>
-        {isTextarea ? (
-            <Textarea
-                id={id}
-                maxLength={maxLength}
-                className="col-span-3 bg-muted border-input text-foreground placeholder:text-muted-foreground"
-                placeholder={`Enter ${label.toLowerCase()}`}
-            />
-        ) : (
-            <Input
-                id={id}
-                maxLength={maxLength}
-                className="col-span-3 bg-muted border-input text-foreground placeholder:text-muted-foreground"
-                placeholder={`Enter ${label.toLowerCase()}`}
-            />
-        )}
+        <div className="col-span-3">
+            {isTextarea ? (
+                <Textarea
+                    id={id}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    maxLength={maxLength}
+                    className="bg-muted border-input text-foreground placeholder:text-muted-foreground"
+                    placeholder={`Enter ${label.toLowerCase()}`}
+                />
+            ) : (
+                <Input
+                    id={id}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    maxLength={maxLength}
+                    className="bg-muted border-input text-foreground placeholder:text-muted-foreground"
+                    placeholder={`Enter ${label.toLowerCase()}`}
+                />
+            )}
+            {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+        </div>
     </div>
 );
 
-const CategoryDialog = ({ isSubCategory = false }) => (
-    <DialogContent className="sm:max-w-[425px] border-border bg-background">
-        <DialogHeader>
-            <DialogTitle className="text-foreground">
-                Add New {isSubCategory ? 'Sub' : ''} Category
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-                Create a new {isSubCategory ? 'sub' : ''} category to{' '}
-                {isSubCategory
-                    ? 'the selected category'
-                    : 'group news articles'}
-                .
-            </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-            <FormField
-                label="Name"
-                id={`${isSubCategory ? 'sub-' : ''}title`}
-                maxLength={100}
-            />
-            <FormField
-                label="Path"
-                id={`${isSubCategory ? 'sub-' : ''}path`}
-                maxLength={100}
-            />
-            <FormField
-                label="Description"
-                id={`${isSubCategory ? 'sub-' : ''}description`}
-                maxLength={200}
-                isTextarea
-            />
-        </div>
-        <DialogFooter>
-            <Button type="submit" variant="secondary">
-                Save
-            </Button>
-        </DialogFooter>
-    </DialogContent>
-);
-
-const ActionsMenu = ({
+const CategoryDialog = ({
     isSubCategory = false,
+    parentCategoryId = '',
+    onClose,
+    editData = null,
 }: {
     isSubCategory?: boolean;
-}) => (
-    <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-            <Button
-                variant="ghost"
-                className="h-8 w-8 p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-                <MoreVertical className="h-4 w-4" />
-            </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-            align="end"
-            className="border-border bg-background"
-        >
-            {!isSubCategory && (
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <DropdownMenuItem
-                            className="flex items-center gap-2 hover:bg-muted"
-                            onSelect={(e) => e.preventDefault()}
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add Sub Category
-                        </DropdownMenuItem>
-                    </DialogTrigger>
-                    <CategoryDialog isSubCategory />
-                </Dialog>
-            )}
-            <DropdownMenuItem className="flex items-center gap-2 hover:bg-muted">
-                <Pencil className="h-4 w-4" />
-                Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-2 text-destructive hover:bg-muted hover:text-destructive">
-                <Trash2 className="h-4 w-4" />
-                Delete
-            </DropdownMenuItem>
-        </DropdownMenuContent>
-    </DropdownMenu>
-);
+    parentCategoryId?: string;
+    onClose: () => void;
+    editData?: Category | SubCategory | null;
+}) => {
+    const { toast } = useToast();
+    const router = useRouter();
+    const [formData, setFormData] = React.useState({
+        title: editData?.title || '',
+        path: editData?.path || '',
+        description: editData?.description || '',
+    });
+    const [errors, setErrors] = React.useState<Record<string, string>>({});
 
-const TableContent = ({ columns }: { columns: string[] }) => {
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setErrors({});
+
+        try {
+            if (editData) {
+                if (isSubCategory) {
+                    await updateSubCategory(editData.id, {
+                        ...formData,
+                        categoryId: parentCategoryId,
+                    });
+                } else {
+                    await updateCategory(editData.id, formData);
+                }
+                toast({ title: 'Updated successfully' });
+            } else {
+                if (isSubCategory) {
+                    await createSubCategory({
+                        ...formData,
+                        categoryId: parentCategoryId,
+                    });
+                } else {
+                    await createCategory(formData);
+                }
+                toast({ title: 'Created successfully' });
+            }
+
+            router.refresh();
+            onClose();
+        } catch (error) {
+            if (error instanceof Error) {
+                toast({
+                    title: 'Error',
+                    description: error.message,
+                    variant: 'destructive',
+                });
+            }
+        }
+    };
+
+    return (
+        <DialogContent className="sm:max-w-[425px] border-border bg-background">
+            <form onSubmit={handleSubmit}>
+                <DialogHeader>
+                    <DialogTitle className="text-foreground">
+                        {editData ? 'Edit' : 'Add New'}{' '}
+                        {isSubCategory ? 'Sub' : ''} Category
+                    </DialogTitle>
+                    <DialogDescription className="text-muted-foreground">
+                        {editData ? 'Edit' : 'Create a new'}{' '}
+                        {isSubCategory ? 'sub' : ''} category
+                        {isSubCategory ? ' to the selected category' : ''}.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <FormField
+                        label="Name"
+                        id="title"
+                        maxLength={100}
+                        value={formData.title}
+                        onChange={(value) =>
+                            setFormData((prev) => ({ ...prev, title: value }))
+                        }
+                        error={errors.title}
+                    />
+                    <FormField
+                        label="Path"
+                        id="path"
+                        maxLength={100}
+                        value={formData.path}
+                        onChange={(value) =>
+                            setFormData((prev) => ({ ...prev, path: value }))
+                        }
+                        error={errors.path}
+                    />
+                    <FormField
+                        label="Description"
+                        id="description"
+                        maxLength={200}
+                        value={formData.description}
+                        onChange={(value) =>
+                            setFormData((prev) => ({
+                                ...prev,
+                                description: value,
+                            }))
+                        }
+                        error={errors.description}
+                        isTextarea
+                    />
+                </div>
+                <DialogFooter>
+                    <Button type="submit" variant="secondary">
+                        {editData ? 'Update' : 'Save'}
+                    </Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+    );
+};
+
+const ActionsMenu = ({
+    item,
+    isSubCategory = false,
+    onEdit,
+    onAddSub,
+}: {
+    item: Category | SubCategory;
+    isSubCategory?: boolean;
+    onEdit: () => void;
+    onAddSub?: () => void;
+}) => {
+    const { toast } = useToast();
+    const router = useRouter();
+
+    const handleDelete = async () => {
+        try {
+            if (isSubCategory) {
+                await deleteSubCategory(item.id);
+            } else {
+                await deleteCategory(item.id);
+            }
+            toast({ title: 'Deleted successfully' });
+            router.refresh();
+        } catch (error) {
+            if (error instanceof Error) {
+                toast({
+                    title: 'Error',
+                    description: error.message,
+                    variant: 'destructive',
+                });
+            }
+        }
+    };
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    variant="ghost"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                    <MoreVertical className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+                align="end"
+                className="border-border bg-background"
+            >
+                {!isSubCategory && onAddSub && (
+                    <DropdownMenuItem
+                        className="flex items-center gap-2 hover:bg-muted"
+                        onSelect={(e) => {
+                            e.preventDefault();
+                            onAddSub();
+                        }}
+                    >
+                        <Plus className="h-4 w-4" />
+                        Add Sub Category
+                    </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                    className="flex items-center gap-2 hover:bg-muted"
+                    onSelect={onEdit}
+                >
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                    className="flex items-center gap-2 text-destructive hover:bg-muted hover:text-destructive"
+                    onSelect={handleDelete}
+                >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+};
+
+const TableContent = ({
+    columns,
+    categories,
+    onEdit,
+    onAddSub,
+}: {
+    columns: string[];
+    categories: Category[];
+    onEdit: (item: Category | SubCategory, isSubCategory: boolean) => void;
+    onAddSub: (category: Category) => void;
+}) => {
     const [openCategories, setOpenCategories] = React.useState<string[]>([]);
 
     const toggleCategory = (categoryId: string) => {
@@ -252,7 +319,6 @@ const TableContent = ({ columns }: { columns: string[] }) => {
 
     const formatDate = (date: string | Date): string => {
         const dateObject = date instanceof Date ? date : new Date(date);
-
         const dateFormat = new Intl.DateTimeFormat('en-US', {
             day: 'numeric',
             month: 'long',
@@ -322,7 +388,11 @@ const TableContent = ({ columns }: { columns: string[] }) => {
                             {formatDate(category.createdAt)}
                         </TableCell>
                         <TableCell className="text-right">
-                            <ActionsMenu />
+                            <ActionsMenu
+                                item={category}
+                                onEdit={() => onEdit(category, false)}
+                                onAddSub={() => onAddSub(category)}
+                            />
                         </TableCell>
                     </TableRow>,
                     ...category.subCategories.map((subCategory) => (
@@ -348,7 +418,11 @@ const TableContent = ({ columns }: { columns: string[] }) => {
                                 {formatDate(subCategory.createdAt)}
                             </TableCell>
                             <TableCell className="text-right">
-                                <ActionsMenu isSubCategory />
+                                <ActionsMenu
+                                    item={subCategory}
+                                    isSubCategory
+                                    onEdit={() => onEdit(subCategory, true)}
+                                />
                             </TableCell>
                         </TableRow>
                     )),
@@ -359,6 +433,17 @@ const TableContent = ({ columns }: { columns: string[] }) => {
 };
 
 const Page = () => {
+    const { toast } = useToast();
+    const [categories, setCategories] = React.useState<Category[]>([]);
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const [selectedItem, setSelectedItem] = React.useState<{
+        item: Category | SubCategory | null;
+        isSubCategory: boolean;
+    }>({ item: null, isSubCategory: false });
+    const [selectedParentCategory, setSelectedParentCategory] =
+        React.useState<Category | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+
     const columns = [
         'Category Name',
         'Path',
@@ -367,23 +452,102 @@ const Page = () => {
         'Actions',
     ];
 
+    // Fetch categories on mount
+    React.useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const data = await getCategories();
+                setCategories(data);
+            } catch (error) {
+                if (error instanceof Error) {
+                    toast({
+                        title: 'Error fetching categories',
+                        description: error.message,
+                        variant: 'destructive',
+                    });
+                }
+            }
+        };
+
+        fetchCategories();
+    }, [toast]);
+
+    // Filter categories based on search term
+    const filteredCategories = categories.filter(
+        (category) =>
+            category.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            category.description
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase()) ||
+            category.subCategories.some(
+                (sub) =>
+                    sub.title
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase()) ||
+                    sub.description
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase())
+            )
+    );
+
+    const handleEdit = (
+        item: Category | SubCategory,
+        isSubCategory: boolean
+    ) => {
+        setSelectedItem({ item, isSubCategory });
+        if (isSubCategory) {
+            const parentCategory = categories.find((cat) =>
+                cat.subCategories.some((sub) => sub.id === item.id)
+            );
+            setSelectedParentCategory(parentCategory || null);
+        }
+        setIsDialogOpen(true);
+    };
+
+    const handleAddSub = (category: Category) => {
+        setSelectedParentCategory(category);
+        setSelectedItem({ item: null, isSubCategory: true });
+        setIsDialogOpen(true);
+    };
+
+    const handleAddCategory = () => {
+        setSelectedItem({ item: null, isSubCategory: false });
+        setSelectedParentCategory(null);
+        setIsDialogOpen(true);
+    };
+
     return (
         <div>
             <div className="mb-6 flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-foreground">
                     Category Management
                 </h1>
-                <Dialog>
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
                         <Button
                             className="inline-flex items-center gap-2"
                             variant="secondary"
+                            onClick={handleAddCategory}
                         >
                             <PlusCircle className="h-5 w-5" />
                             Add Category
                         </Button>
                     </DialogTrigger>
-                    <CategoryDialog />
+                    {isDialogOpen && (
+                        <CategoryDialog
+                            isSubCategory={selectedItem.isSubCategory}
+                            parentCategoryId={selectedParentCategory?.id || ''}
+                            editData={selectedItem.item}
+                            onClose={() => {
+                                setIsDialogOpen(false);
+                                setSelectedItem({
+                                    item: null,
+                                    isSubCategory: false,
+                                });
+                                setSelectedParentCategory(null);
+                            }}
+                        />
+                    )}
                 </Dialog>
             </div>
 
@@ -393,12 +557,19 @@ const Page = () => {
                     <Input
                         placeholder="Search categories..."
                         className="pl-10 bg-muted border-input text-foreground placeholder:text-muted-foreground"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
             </div>
 
             <div className="rounded-lg border border-border bg-card shadow-lg overflow-hidden">
-                <TableContent columns={columns} />
+                <TableContent
+                    columns={columns}
+                    categories={filteredCategories}
+                    onEdit={handleEdit}
+                    onAddSub={handleAddSub}
+                />
             </div>
         </div>
     );

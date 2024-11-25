@@ -26,21 +26,30 @@ const Footer: React.FC<FooterProps> = ({ sidebarOpen }) => {
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="flex flex-col md:flex-row items-center gap-4">
                         <span className="text-sm text-muted-foreground">
-                            © {currentYear} Goat News Admin. All rights reserved.
+                            © {currentYear} Goat News Admin. All rights
+                            reserved.
                         </span>
                         <div className="hidden md:flex items-center gap-4">
                             <Separator orientation="vertical" className="h-4" />
-                            <Button variant="link" className="text-sm h-auto p-0">
+                            <Button
+                                variant="link"
+                                className="text-sm h-auto p-0"
+                            >
                                 Privacy Policy
                             </Button>
-                            <Button variant="link" className="text-sm h-auto p-0">
+                            <Button
+                                variant="link"
+                                className="text-sm h-auto p-0"
+                            >
                                 Terms of Service
                             </Button>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <span className="text-sm text-muted-foreground">v1.0.0</span>
+                        <span className="text-sm text-muted-foreground">
+                            v1.0.0
+                        </span>
                         <Separator orientation="vertical" className="h-4" />
                         <div className="flex items-center gap-2">
                             <Button variant="ghost" size="icon" asChild>

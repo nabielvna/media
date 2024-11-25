@@ -26,11 +26,13 @@ import {
     Mail,
     Key,
     UserCheck,
+    Shield,
 } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,6 +46,10 @@ interface User {
     emailVerified: string | null;
     contributionScore: number;
     createdAt: string;
+    role: {
+        id: string;
+        name: string;
+    };
 }
 
 const UsersPage = () => {
@@ -57,6 +63,7 @@ const UsersPage = () => {
             emailVerified: '2024-11-24T10:00:00Z',
             contributionScore: 125,
             createdAt: '2024-11-20T10:00:00Z',
+            role: { id: '1', name: 'Admin' },
         },
         {
             id: '2',
@@ -66,9 +73,11 @@ const UsersPage = () => {
             emailVerified: null,
             contributionScore: 85,
             createdAt: '2024-11-22T09:30:00Z',
+            role: { id: '2', name: 'Editor' },
         },
     ];
 
+    const [filterRole, setFilterRole] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [filterVerified, setFilterVerified] = useState('all');
 
@@ -176,6 +185,17 @@ const UsersPage = () => {
                             </SelectItem>
                         </SelectContent>
                     </Select>
+                    <Select value={filterRole} onValueChange={setFilterRole}>
+                        <SelectTrigger className="w-[180px] bg-muted border-input">
+                            <SelectValue placeholder="Filter Role" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border-input">
+                            <SelectItem value="all">All Roles</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="editor">Editor</SelectItem>
+                            <SelectItem value="moderator">Moderator</SelectItem>
+                        </SelectContent>
+                    </Select>
                     <Button
                         variant="outline"
                         className="flex items-center gap-2 border-input"
@@ -196,6 +216,9 @@ const UsersPage = () => {
                             </TableHead>
                             <TableHead className="text-muted-foreground">
                                 Email
+                            </TableHead>
+                            <TableHead className="text-muted-foreground">
+                                Role
                             </TableHead>
                             <TableHead className="text-muted-foreground">
                                 Status
@@ -232,6 +255,11 @@ const UsersPage = () => {
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
                                     {user.email}
+                                </TableCell>
+                                <TableCell>
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                        {user.role.name}
+                                    </span>
                                 </TableCell>
                                 <TableCell>
                                     <span
@@ -295,6 +323,12 @@ const UsersPage = () => {
                                                 <Key size={16} />
                                                 Reset Password
                                             </DropdownMenuItem>
+                                            <DropdownMenuSeparator className="bg-border" />
+                                            <DropdownMenuItem className="flex items-center gap-2 hover:bg-muted">
+                                                <Shield size={16} />
+                                                Change Role
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator className="bg-border" />
                                             <DropdownMenuItem className="flex items-center gap-2 text-destructive hover:bg-muted">
                                                 <Ban size={16} />
                                                 Block User

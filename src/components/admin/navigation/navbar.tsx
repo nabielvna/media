@@ -1,7 +1,15 @@
 'use client';
 
 import React from 'react';
-import { Bell, Search, LogOut, User, Settings, Newspaper, BellOff } from 'lucide-react';
+import {
+    Bell,
+    Search,
+    LogOut,
+    User,
+    Settings,
+    Newspaper,
+    BellOff,
+} from 'lucide-react';
 import ModeToggle from '@/components/mode-toggle';
 import Link from 'next/link';
 import {
@@ -11,7 +19,6 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-    DropdownMenuShortcut,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,14 +27,14 @@ import {
     HoverCard,
     HoverCardContent,
     HoverCardTrigger,
-} from "@/components/ui/hover-card";
+} from '@/components/ui/hover-card';
 import {
     Sheet,
     SheetContent,
     SheetHeader,
     SheetTitle,
     SheetTrigger,
-} from "@/components/ui/sheet";
+} from '@/components/ui/sheet';
 import {
     CommandDialog,
     CommandInput,
@@ -36,7 +43,7 @@ import {
     CommandGroup,
     CommandItem,
     CommandShortcut,
-} from "@/components/ui/command";
+} from '@/components/ui/command';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { DialogTitle } from '@/components/ui/dialog';
 
@@ -87,14 +94,23 @@ const Navbar: React.FC<NavbarProps> = ({ sidebarOpen }) => {
 
                         <Sheet>
                             <SheetTrigger asChild>
-                                <Button variant="ghost" size="icon" className="relative">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="relative"
+                                >
                                     <Bell className="h-5 w-5" />
-                                    {notifications.filter(n => !n.read).length > 0 && (
+                                    {notifications.filter((n) => !n.read)
+                                        .length > 0 && (
                                         <Badge
                                             variant="destructive"
                                             className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0"
                                         >
-                                            {notifications.filter(n => !n.read).length}
+                                            {
+                                                notifications.filter(
+                                                    (n) => !n.read
+                                                ).length
+                                            }
                                         </Badge>
                                     )}
                                 </Button>
@@ -108,12 +124,18 @@ const Navbar: React.FC<NavbarProps> = ({ sidebarOpen }) => {
                                         <div
                                             key={notification.id}
                                             className={`flex items-center justify-between p-3 rounded-lg ${
-                                                notification.read ? 'bg-muted/50' : 'bg-muted'
+                                                notification.read
+                                                    ? 'bg-muted/50'
+                                                    : 'bg-muted'
                                             }`}
                                         >
                                             <div className="flex flex-col gap-1">
-                                                <div className="text-sm font-medium">{notification.title}</div>
-                                                <div className="text-xs text-muted-foreground">{notification.time}</div>
+                                                <div className="text-sm font-medium">
+                                                    {notification.title}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    {notification.time}
+                                                </div>
                                             </div>
                                             <Button variant="ghost" size="icon">
                                                 {notification.read ? (
@@ -132,42 +154,61 @@ const Navbar: React.FC<NavbarProps> = ({ sidebarOpen }) => {
                             <HoverCardTrigger asChild>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                                        <Button
+                                            variant="ghost"
+                                            className="relative h-9 w-9 rounded-full"
+                                        >
                                             <Avatar className="h-9 w-9">
-                                                <AvatarImage src="/team/gayu.jpg" alt="Profile" className="aspect-square object-cover w-full h-full"/>
-                                                <AvatarFallback>GA</AvatarFallback>
+                                                <AvatarImage
+                                                    src="/team/gayu.jpg"
+                                                    alt="Profile"
+                                                    className="aspect-square object-cover w-full h-full"
+                                                />
+                                                <AvatarFallback>
+                                                    GA
+                                                </AvatarFallback>
                                             </Avatar>
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent className="w-56" align="end">
-                                        <DropdownMenuLabel>Goat Admin</DropdownMenuLabel>
+                                    <DropdownMenuContent
+                                        className="w-56"
+                                        align="end"
+                                    >
+                                        <DropdownMenuLabel>
+                                            Goat Admin
+                                        </DropdownMenuLabel>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem asChild>
-                                            <Link href="/admin/profile" className="flex items-center">
+                                            <Link
+                                                href="/admin/profile"
+                                                className="flex items-center"
+                                            >
                                                 <User className="mr-2 h-4 w-4" />
                                                 <span>Profile</span>
-                                                <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
                                             </Link>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem asChild>
-                                            <Link href="/admin/settings" className="flex items-center">
+                                            <Link
+                                                href="/admin/settings"
+                                                className="flex items-center"
+                                            >
                                                 <Settings className="mr-2 h-4 w-4" />
                                                 <span>Settings</span>
-                                                <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
                                             </Link>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem asChild>
-                                            <Link href="/" className="flex items-center">
+                                            <Link
+                                                href="/"
+                                                className="flex items-center"
+                                            >
                                                 <Newspaper className="mr-2 h-4 w-4" />
                                                 <span>Goat News</span>
-                                                <DropdownMenuShortcut>⌘G</DropdownMenuShortcut>
                                             </Link>
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem className="text-red-600 dark:text-red-400">
                                             <LogOut className="mr-2 h-4 w-4" />
                                             <span>Logout</span>
-                                            <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
@@ -175,11 +216,16 @@ const Navbar: React.FC<NavbarProps> = ({ sidebarOpen }) => {
                             <HoverCardContent className="w-80" align="end">
                                 <div className="flex justify-between space-x-4">
                                     <Avatar className="h-16 w-16">
-                                        <AvatarImage src="/team/gayu.jpg" className="aspect-square object-cover" />
+                                        <AvatarImage
+                                            src="/team/gayu.jpg"
+                                            className="aspect-square object-cover"
+                                        />
                                         <AvatarFallback>GA</AvatarFallback>
                                     </Avatar>
                                     <div className="space-y-1">
-                                        <h4 className="text-sm font-semibold">Goat Admin</h4>
+                                        <h4 className="text-sm font-semibold">
+                                            Goat Admin
+                                        </h4>
                                         <p className="text-sm text-muted-foreground">
                                             Senior Administrator
                                         </p>

@@ -26,7 +26,7 @@ const cards = [
         description: 'In 3 categories',
     },
     {
-        title: 'New Sub Categories',
+        title: 'New News',
         value: '5',
         description: 'Added this week',
     },

@@ -15,6 +15,7 @@ import {
     ThumbsUp,
     Bookmark,
     BarChart,
+    Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -40,35 +41,56 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
     const navSections: NavSection[] = [
         {
-            title: "Overview",
+            title: 'Overview',
             items: [
                 { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
-            ]
+            ],
         },
         {
-            title: "Content Management",
+            title: 'Content Management',
             items: [
                 { icon: FileText, label: 'Berita', href: '/admin/news' },
                 { icon: Layers, label: 'Kategori', href: '/admin/categories' },
-                { icon: FolderTree, label: 'Sub Kategori', href: '/admin/subcategories' },
-            ]
+                {
+                    icon: FolderTree,
+                    label: 'Sub Kategori',
+                    href: '/admin/subcategories',
+                },
+            ],
         },
         {
-            title: "User Engagement",
+            title: 'User Engagement',
             items: [
                 { icon: Users, label: 'Pengguna', href: '/admin/users' },
-                { icon: MessageSquare, label: 'Komentar', href: '/admin/comments' },
+                { icon: Shield, label: 'Roles', href: '/admin/roles' }, // Tambahkan ini
+                {
+                    icon: MessageSquare,
+                    label: 'Komentar',
+                    href: '/admin/comments',
+                },
                 { icon: ThumbsUp, label: 'Likes', href: '/admin/likes' },
-                { icon: Bookmark, label: 'Bookmarks', href: '/admin/bookmarks' },
-                { icon: BarChart, label: 'Interaksi', href: '/admin/interactions' },
-            ]
+                {
+                    icon: Bookmark,
+                    label: 'Bookmarks',
+                    href: '/admin/bookmarks',
+                },
+                {
+                    icon: BarChart,
+                    label: 'Interaksi',
+                    href: '/admin/interactions',
+                },
+            ],
         },
         {
-            title: "System",
+            title: 'System',
             items: [
-                { icon: Settings, label: 'Pengaturan', href: '/admin/settings' },
-            ]
-        }
+                {
+                    icon: Settings,
+                    label: 'Pengaturan',
+                    href: '/admin/settings',
+                },
+            ],
+        },
     ];
 
     const isActiveLink = (href: string) => {
@@ -81,15 +103,15 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     return (
         <div
             className={cn(
-                "fixed top-0 left-0 z-30 h-full border-r bg-background transition-all duration-300 mx-auto",
-                sidebarOpen ? "w-64" : "w-18"
+                'fixed top-0 left-0 z-30 h-full border-r bg-background transition-all duration-300 mx-auto',
+                sidebarOpen ? 'w-64' : 'w-18'
             )}
         >
             <div className="flex h-16 items-center justify-between px-4 border-b">
                 <h1
                     className={cn(
-                        "font-semibold text-xl tracking-tight",
-                        !sidebarOpen && "hidden"
+                        'font-semibold text-xl tracking-tight',
+                        !sidebarOpen && 'hidden'
                     )}
                 >
                     Admin Panel
@@ -119,15 +141,17 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
                                         key={itemIdx}
                                         href={item.href}
                                         className={cn(
-                                            "flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
+                                            'flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors',
                                             isActiveLink(item.href)
-                                                ? "bg-primary/10 text-primary hover:bg-primary/20"
-                                                : "hover:bg-accent hover:text-accent-foreground",
-                                            !sidebarOpen && ""
+                                                ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                                                : 'hover:bg-accent hover:text-accent-foreground',
+                                            !sidebarOpen && ''
                                         )}
                                     >
                                         <item.icon className="h-5 w-5" />
-                                        {sidebarOpen && <span>{item.label}</span>}
+                                        {sidebarOpen && (
+                                            <span>{item.label}</span>
+                                        )}
                                     </Link>
                                 ))}
                             </div>
