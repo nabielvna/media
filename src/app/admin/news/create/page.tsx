@@ -1,594 +1,572 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Eye, EyeOff, Image as ImageIcon, Type as TextIcon, Grip, X } from 'lucide-react';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
-    Type,
-    Image as ImageIcon,
-    GripVertical,
-    X,
-    Minus,
-    ArrowLeft
-} from 'lucide-react';
-import { createNews } from '@/actions/news';
-import { getSubCategories } from '@/actions/subcategory';
-import type { SubCategory } from '@/types';
-import {
-    DragDropContext,
-    Droppable,
-    Draggable,
-    DropResult,
-} from '@hello-pangea/dnd';
-import { useRouter } from 'next/navigation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Image from 'next/image';
 import RichTextEditor from '@/components/tiptap/rich-text-editor';
+import { getSubCategories } from '@/actions/subcategory';
+import { SubCategory } from '@/types';
 
-// Types
-type SectionContent = {
+type Section = {
+  id: string;
+  order: number;
+  isSeparator: boolean;
+  title: string;
+  content: {
     type: 'text' | 'image';
-    data: {
-        text?: string;
-        imageUrl?: string;
-        alt?: string;
-        description?: string;
-    };
+    data: TextContent | ImageContent;
+  };
 };
 
-type FormSection = {
-    order: number;
-    isSeparator: boolean;
-    content: SectionContent;
+type TextContent = {
+  text: string;
 };
 
-type NewsFormData = {
-    title: string;
-    description: string;
-    thumbnailUrl: string;
-    subCategoryId: string;
-    sections: FormSection[];
+type ImageContent = {
+  imageUrl: string;
+  alt: string;
+  description: string;
 };
 
-// Form Field Component
-const FormField = ({
-    label,
-    id,
-    maxLength,
-    value,
-    onChange,
-    isTextarea = false,
-    error,
-}: {
-    label: string;
-    id: string;
-    maxLength: number;
-    value: string;
-    onChange: (value: string) => void;
-    isTextarea?: boolean;
-    error?: string;
-}) => (
-    <div className="grid gap-2">
-        <Label htmlFor={id} className="text-muted-foreground">
-            {label}
-        </Label>
-        <div>
-            {isTextarea ? (
-                <Textarea
-                    id={id}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    maxLength={maxLength}
-                    className="bg-muted border-input"
-                    placeholder={`Enter ${label.toLowerCase()}`}
-                />
-            ) : (
-                <Input
-                    id={id}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    maxLength={maxLength}
-                    className="bg-muted border-input"
-                    placeholder={`Enter ${label.toLowerCase()}`}
-                />
-            )}
-            {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+type EditorViewProps = {
+  title: string;
+  setTitle: (value: string) => void;
+  description: string;
+  setDescription: (value: string) => void;
+  thumbnailUrl: string;
+  setThumbnailUrl: (value: string) => void;
+  subCategoryId: string;
+  setSubCategoryId: (value: string) => void;
+  subCategories: SubCategory[];
+  isLoadingSubCategories: boolean;
+  sections: Section[];
+  setSections: (sections: Section[]) => void;
+  isDragging: boolean;
+  draggedIndex: number | null;
+  handleDragStart: (index: number) => void;
+  handleDragOver: (e: React.DragEvent, index: number) => void;
+  handleDragEnd: () => void;
+  addSection: (type: 'text' | 'image') => void;
+  updateSection: (index: number, data: Partial<Section>) => void;
+  removeSection: (index: number) => void;
+};
+
+type PreviewViewProps = {
+  title: string;
+  description: string;
+  thumbnailUrl: string;
+  sections: Section[];
+};
+
+const EditorView = ({
+  title,
+  setTitle,
+  description,
+  setDescription,
+  thumbnailUrl,
+  setThumbnailUrl,
+  subCategoryId,
+  setSubCategoryId,
+  subCategories,
+  isLoadingSubCategories,
+  sections,
+  setSections,
+  isDragging,
+  draggedIndex,
+  handleDragStart,
+  handleDragOver,
+  handleDragEnd,
+  addSection,
+  updateSection,
+  removeSection
+}: EditorViewProps) => (
+  <div className="space-y-8">
+    <Card>
+      <CardContent className="p-6 space-y-6">
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="title" className="text-zinc-800 dark:text-zinc-200 font-medium">Title</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter news title"
+              className="mt-1 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="description" className="text-zinc-800 dark:text-zinc-200 font-medium">Description</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter news description"
+              className="mt-1 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="thumbnail" className="text-zinc-800 dark:text-zinc-200 font-medium">Thumbnail URL</Label>
+            <Input
+              id="thumbnail"
+              value={thumbnailUrl}
+              onChange={(e) => setThumbnailUrl(e.target.value)}
+              placeholder="Enter thumbnail URL"
+              className="mt-1 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="subcategory" className="text-zinc-800 dark:text-zinc-200 font-medium">Sub Category</Label>
+            <Select value={subCategoryId} onValueChange={setSubCategoryId} disabled={isLoadingSubCategories}>
+              <SelectTrigger className="mt-1 text-zinc-800 dark:text-zinc-200">
+                <SelectValue placeholder={isLoadingSubCategories ? "Loading..." : "Select a sub category"} />
+              </SelectTrigger>
+              <SelectContent>
+                {subCategories.map((subCategory) => (
+                  <SelectItem key={subCategory.id} value={subCategory.id}>
+                    {subCategory.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-    </div>
-);
+      </CardContent>
+    </Card>
 
-// Section Components
-const TextSection = ({
-    value,
-    onChange,
-}: {
-    value: string;
-    onChange: (value: string) => void;
-}) => (
-    <RichTextEditor
-        value={value}
-        onChange={onChange}
-    />
-);
-
-const ImageSection = ({
-    data,
-    onChange,
-}: {
-    data: { imageUrl: string; alt: string; description: string };
-    onChange: (data: { imageUrl: string; alt: string; description: string }) => void;
-}) => (
     <div className="space-y-4">
-        <FormField
-            label="Image URL"
-            id="imageUrl"
-            maxLength={1000}
-            value={data.imageUrl}
-            onChange={(value) => onChange({ ...data, imageUrl: value })}
-        />
-        <FormField
-            label="Alt Text"
-            id="alt"
-            maxLength={50}
-            value={data.alt}
-            onChange={(value) => onChange({ ...data, alt: value })}
-        />
-        <FormField
-            label="Description"
-            id="description"
-            maxLength={150}
-            value={data.description}
-            onChange={(value) => onChange({ ...data, description: value })}
-            isTextarea
-        />
+      <div className="flex gap-2">
+        <Button onClick={() => addSection('text')} variant="outline" className="text-zinc-800 dark:text-zinc-200">
+          <TextIcon className="w-4 h-4 mr-2" />
+          Add Text
+        </Button>
+        <Button onClick={() => addSection('image')} variant="outline" className="text-zinc-800 dark:text-zinc-200">
+          <ImageIcon className="w-4 h-4 mr-2" />
+          Add Image
+        </Button>
+        <Button onClick={() => setSections([...sections, {
+          id: Math.random().toString(36).substr(2, 9),
+          order: sections.length,
+          isSeparator: true,
+          title: '',
+          content: { type: 'text', data: { text: '' } }
+        }])} variant="outline" className="text-zinc-800 dark:text-zinc-200">
+          Add Separator
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        {sections.map((section, index) => (
+          <Card
+            key={section.id}
+            className={`${isDragging && draggedIndex === index ? 'opacity-50' : ''}`}
+            draggable
+            onDragStart={() => handleDragStart(index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDragEnd={handleDragEnd}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Grip className="w-4 h-4 cursor-move text-zinc-600 dark:text-zinc-400" />
+                  <span className="text-sm text-zinc-800 dark:text-zinc-200 font-medium">Section {index + 1}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={section.isSeparator}
+                    onCheckedChange={(checked) => updateSection(index, { isSeparator: checked })}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeSection(index)}
+                    className="text-zinc-700 hover:text-red-600 dark:text-zinc-300"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {!section.isSeparator && (
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-zinc-800 dark:text-zinc-200 font-medium">Section Title</Label>
+                    <Input
+                      value={section.title}
+                      onChange={(e) => updateSection(index, { title: e.target.value })}
+                      placeholder="Enter section title"
+                      className="mt-1 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
+                    />
+                  </div>
+
+                  {section.content.type === 'text' && (
+                    <div>
+                      <Label className="text-zinc-800 dark:text-zinc-200 font-medium">Content</Label>
+                      <div className="mt-1">
+                        <RichTextEditor
+                          content={(section.content.data as TextContent).text}
+                          onChange={(newContent) => updateSection(index, {
+                            content: {
+                              type: 'text',
+                              data: { text: newContent }
+                            }
+                          })}
+                          placeholder="Start writing your content..."
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {section.content.type === 'image' && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-zinc-800 dark:text-zinc-200 font-medium">Image URL</Label>
+                        <Input
+                          value={(section.content.data as ImageContent).imageUrl}
+                          onChange={(e) => updateSection(index, {
+                            content: {
+                              type: 'image',
+                              data: {
+                                ...(section.content.data as ImageContent),
+                                imageUrl: e.target.value
+                              }
+                            }
+                          })}
+                          placeholder="Image URL"
+                          className="mt-1 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-zinc-800 dark:text-zinc-200 font-medium">Alt Text</Label>
+                        <Input
+                          value={(section.content.data as ImageContent).alt}
+                          onChange={(e) => updateSection(index, {
+                            content: {
+                              type: 'image',
+                              data: {
+                                ...(section.content.data as ImageContent),
+                                alt: e.target.value
+                              }
+                            }
+                          })}
+                          placeholder="Alt text"
+                          className="mt-1 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-zinc-800 dark:text-zinc-200 font-medium">Image Description</Label>
+                        <Input
+                          value={(section.content.data as ImageContent).description}
+                          onChange={(e) => updateSection(index, {
+                            content: {
+                              type: 'image',
+                              data: {
+                                ...(section.content.data as ImageContent),
+                                description: e.target.value
+                              }
+                            }
+                          })}
+                          placeholder="Image description"
+                          className="mt-1 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {section.isSeparator && (
+                <Separator className="my-4" />
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
+  </div>
 );
 
-// Section Item Component
-const SectionItem = ({
-    section,
-    index,
-    onUpdate,
-    onDelete,
-}: {
-    section: FormSection;
-    index: number;
-    onUpdate: (section: FormSection) => void;
-    onDelete: () => void;
-}) => (
-    <Draggable draggableId={`section-${index}`} index={index}>
-        {(provided) => (
-            <Card
-                ref={provided.innerRef}
-                {...provided.draggableProps}
-                className="mb-4"
-            >
-                <CardContent className="pt-6">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div {...provided.dragHandleProps}>
-                            <GripVertical className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                    <Label>Separator</Label>
-                                    <Switch
-                                        checked={section.isSeparator}
-                                        onCheckedChange={(checked) =>
-                                            onUpdate({
-                                                ...section,
-                                                isSeparator: checked,
-                                            })
-                                        }
-                                    />
-                                </div>
-                                {!section.isSeparator && (
-                                    <Select
-                                        value={section.content.type}
-                                        onValueChange={(value: 'text' | 'image') =>
-                                            onUpdate({
-                                                ...section,
-                                                content: {
-                                                    type: value,
-                                                    data: value === 'text'
-                                                        ? { text: '' }
-                                                        : { imageUrl: '', alt: '', description: '' }
-                                                }
-                                            })
-                                        }
-                                    >
-                                        <SelectTrigger className="w-[120px]">
-                                            <SelectValue placeholder="Type" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="text">Text</SelectItem>
-                                            <SelectItem value="image">Image</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={onDelete}
-                                    className="ml-auto"
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
+const PreviewView = ({
+  title,
+  description,
+  thumbnailUrl,
+  sections
+}: PreviewViewProps) => (
+    <div className="space-y-8">
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+          <span>Selected Category</span>
+          <span>•</span>
+          <span>{format(new Date(), 'MMM d, yyyy')}</span>
+        </div>
+        <h1 className="text-4xl font-bold text-zinc-800 dark:text-zinc-200">{title || 'Untitled Article'}</h1>
+        <p className="text-xl text-zinc-700 dark:text-zinc-300">{description}</p>
+      </div>
+    </div>
+
+    {thumbnailUrl && (
+      <div className="relative h-[400px] w-full overflow-hidden rounded-lg">
+        <Image
+          src={thumbnailUrl}
+          alt={title}
+          className="object-cover"
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      </div>
+    )}
+
+    <div className="space-y-8">
+      {sections.map((section) => (
+        <div key={section.id}>
+          {section.isSeparator ? (
+            <Separator className="my-8" />
+          ) : (
+            <Card className="border-none shadow-none">
+              <CardContent className="p-0 space-y-4">
+                {section.title && (
+                  <h2 className="text-2xl font-semibold text-zinc-800 dark:text-zinc-200">{section.title}</h2>
+                )}
+
+                {section.content.type === 'text' && (section.content.data as TextContent).text && (
+                  <div className="prose prose-zinc dark:prose-invert max-w-none
+                    prose-headings:text-zinc-800 dark:prose-headings:text-zinc-200
+                    prose-p:text-zinc-700 dark:prose-p:text-zinc-300
+                    prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
+                    prose-strong:text-zinc-800 dark:prose-strong:text-zinc-200
+                    prose-ul:list-disc prose-ul:pl-4 prose-ul:my-2
+                    prose-ol:list-decimal prose-ol:pl-4 prose-ol:my-2
+                    prose-li:text-zinc-700 dark:prose-li:text-zinc-300 prose-li:my-1
+                    prose-blockquote:border-l-4 prose-blockquote:border-zinc-300 dark:prose-blockquote:border-zinc-700
+                    prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-zinc-600 dark:prose-blockquote:text-zinc-400
+                    prose-img:rounded-lg prose-img:my-4
+                    prose-code:text-zinc-800 dark:prose-code:text-zinc-200
+                    prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800 prose-pre:p-4 prose-pre:rounded-lg
+                    prose-hr:border-zinc-200 dark:prose-hr:border-zinc-800">
+                    <div
+                      dangerouslySetInnerHTML={{ __html: (section.content.data as TextContent).text }}
+                    />
+                  </div>
+                )}
+
+                {section.content.type === 'image' && (section.content.data as ImageContent).imageUrl && (
+                  <div className="space-y-3">
+                    <div className="relative h-[300px] w-full overflow-hidden rounded-lg">
+                      <Image
+                        src={(section.content.data as ImageContent).imageUrl}
+                        alt={(section.content.data as ImageContent).alt || ''}
+                        className="object-cover"
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
                     </div>
-                    {!section.isSeparator && (
-                        <div className="mt-4">
-                            {section.content.type === 'text' ? (
-                                <TextSection
-                                    value={section.content.data.text || ''}
-                                    onChange={(text) =>
-                                        onUpdate({
-                                            ...section,
-                                            content: {
-                                                ...section.content,
-                                                data: { text }
-                                            }
-                                        })
-                                    }
-                                />
-                            ) : (
-                                <ImageSection
-                                    data={{
-                                        imageUrl: section.content.data.imageUrl || '',
-                                        alt: section.content.data.alt || '',
-                                        description: section.content.data.description || ''
-                                    }}
-                                    onChange={(data) =>
-                                        onUpdate({
-                                            ...section,
-                                            content: {
-                                                ...section.content,
-                                                data
-                                            }
-                                        })
-                                    }
-                                />
-                            )}
-                        </div>
+                    {(section.content.data as ImageContent).description && (
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400 italic text-center">
+                        {(section.content.data as ImageContent).description}
+                      </p>
                     )}
-                </CardContent>
+                  </div>
+                )}
+              </CardContent>
             </Card>
-        )}
-    </Draggable>
+          )}
+        </div>
+      ))}
+    </div>
+  </div>
 );
 
 const CreateNewsPage = () => {
     const router = useRouter();
-    const { toast } = useToast();
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [thumbnailUrl, setThumbnailUrl] = useState('');
+    const [subCategoryId, setSubCategoryId] = useState('');
     const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
-    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [isLoadingSubCategories, setIsLoadingSubCategories] = useState(true);
+    const [sections, setSections] = useState<Section[]>([]);
+    const [isDragging, setIsDragging] = useState(false);
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+    const [activeTab, setActiveTab] = useState('editor');
 
-    const [formData, setFormData] = useState<NewsFormData>({
-        title: '',
-        description: '',
-        thumbnailUrl: '',
-        subCategoryId: '',
-        sections: []
-    });
-
-    // TODO: Replace with actual user ID from auth
-    const userId = "123"; // This should come from your auth context/session
-
+    // Fetch subcategories when component mounts
     useEffect(() => {
-        const fetchSubCategories = async () => {
-            try {
-                const data = await getSubCategories();
-                setSubCategories(data);
-                if (data.length > 0) {
-                    setFormData(prev => ({ ...prev, subCategoryId: data[0].id }));
-                }
-            } catch (error) {
-                if (error instanceof Error) {
-                    toast({
-                        title: 'Error fetching categories',
-                        description: error.message,
-                        variant: 'destructive',
-                    });
-                }
-            }
-        };
+      const fetchSubCategories = async () => {
+        try {
+          const data = await getSubCategories();
+          setSubCategories(data);
+        } catch (error) {
+          console.error('Failed to fetch subcategories:', error);
+        } finally {
+          setIsLoadingSubCategories(false);
+        }
+      };
 
-        fetchSubCategories();
+      fetchSubCategories();
     }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setErrors({});
-
-        try {
-            const transformedSections = formData.sections.map(section => {
-                // For separator sections, return a text section with empty content
-                if (section.isSeparator) {
-                    return {
-                        order: section.order,
-                        isSeparator: true,
-                        content: {
-                            type: 'text' as const,
-                            data: { text: '' }
-                        }
-                    };
-                }
-
-                // For text sections, ensure text property exists
-                if (section.content.type === 'text') {
-                    return {
-                        order: section.order,
-                        isSeparator: false,
-                        content: {
-                            type: 'text' as const,
-                            data: {
-                                text: section.content.data.text || ''
-                            }
-                        }
-                    };
-                }
-
-                // For image sections, ensure all required properties exist
-                return {
-                    order: section.order,
-                    isSeparator: false,
-                    content: {
-                        type: 'image' as const,
-                        data: {
-                            imageUrl: section.content.data.imageUrl || '',
-                            alt: section.content.data.alt || '',
-                            description: section.content.data.description || ''
-                        }
-                    }
-                };
-            });
-
-            const newsData = {
-                title: formData.title,
-                description: formData.description,
-                thumbnailUrl: formData.thumbnailUrl || undefined, // Make it optional
-                subCategoryId: formData.subCategoryId,
-                userId,
-                sections: transformedSections
-            };
-
-            await createNews(newsData);
-            toast({ title: 'News created successfully' });
-            router.push('/news');
-        } catch (error) {
-            if (error instanceof Error) {
-                toast({
-                    title: 'Error',
-                    description: error.message,
-                    variant: 'destructive',
-                });
-            }
+    const addSection = (type: 'text' | 'image') => {
+      const newSection: Section = {
+        id: Math.random().toString(36).substr(2, 9),
+        order: sections.length,
+        isSeparator: false,
+        title: '',
+        content: {
+          type,
+          data: type === 'text'
+            ? { text: '' }
+            : { imageUrl: '', alt: '', description: '' }
         }
+      };
+      setSections([...sections, newSection]);
     };
 
-    const addSection = (type: 'text' | 'image' | 'separator') => {
-        const newSection: FormSection = {
-            order: formData.sections.length,
-            isSeparator: type === 'separator',
-            content: type === 'text'
-                ? { type: 'text', data: { text: '' } }
-                : { type: 'image', data: { imageUrl: '', alt: '', description: '' } }
-        };
-
-        setFormData(prev => ({
-            ...prev,
-            sections: [...prev.sections, newSection]
-        }));
+    const updateSection = (index: number, data: Partial<Section>) => {
+      const newSections = [...sections];
+      newSections[index] = { ...newSections[index], ...data };
+      setSections(newSections);
     };
 
-    const updateSection = (index: number, updatedSection: FormSection) => {
-        const newSections = [...formData.sections];
-        newSections[index] = updatedSection;
-        setFormData(prev => ({ ...prev, sections: newSections }));
+    const removeSection = (index: number) => {
+      const newSections = sections.filter((_, i) => i !== index);
+      setSections(newSections);
     };
 
-    const deleteSection = (index: number) => {
-        setFormData(prev => ({
-            ...prev,
-            sections: prev.sections.filter((_, i) => i !== index)
-                .map((section, i) => ({ ...section, order: i }))
-        }));
+    const handleDragStart = (index: number) => {
+      setIsDragging(true);
+      setDraggedIndex(index);
     };
 
-    const handleDragEnd = (result: DropResult) => {
-        if (!result.destination) return;
+    const handleDragOver = (e: React.DragEvent, index: number) => {
+      e.preventDefault();
+      if (draggedIndex === null) return;
 
-        const sections = Array.from(formData.sections);
-        const [removed] = sections.splice(result.source.index, 1);
-        sections.splice(result.destination.index, 0, removed);
+      const newSections = [...sections];
+      const draggedSection = newSections[draggedIndex];
+      newSections.splice(draggedIndex, 1);
+      newSections.splice(index, 0, draggedSection);
+      setSections(newSections);
+      setDraggedIndex(index);
+    };
 
-        setFormData(prev => ({
-            ...prev,
-            sections: sections.map((section, index) => ({
-                ...section,
-                order: index
-            }))
-        }));
+    const handleDragEnd = () => {
+      setIsDragging(false);
+      setDraggedIndex(null);
+    };
+
+    const handleSubmit = async () => {
+      // Convert sections to the format expected by the API
+      const formattedSections = sections.map((section) => ({
+        order: section.order,
+        isSeparator: section.isSeparator,
+        content: {
+          type: section.content.type,
+          data: section.content.data
+        }
+      }));
+
+      const newsData = {
+        title,
+        description,
+        thumbnailUrl,
+        subCategoryId,
+        sections: formattedSections
+      };
+
+      try {
+        // Add your API call here
+        console.log('Submitting news:', newsData);
+        // Redirect to news list or view page after successful creation
+        router.push('/news');
+      } catch (error) {
+        console.error('Failed to create news:', error);
+      }
     };
 
     return (
-        <div className="container mx-auto pt-16 max-w-4xl">
-            <div className="flex items-center gap-4 mb-6">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => router.push('/admin/news')}
-                    className="gap-2"
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back
+      <div className="min-h-screen pt-16">
+        <div className="max-w-4xl mx-auto p-6">
+          <div className="sticky top-0 z-10 pb-6">
+            <div className="flex justify-between items-center mb-6">
+              <div className="space-y-1">
+                <h1 className="text-3xl font-bold text-zinc-800 dark:text-zinc-200">Create News</h1>
+                <p className="text-zinc-600 dark:text-zinc-400">Create a new article with rich content sections</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => router.back()}>
+                  Cancel
                 </Button>
-                <h1 className="text-2xl font-bold">Create News</h1>
+                <Button onClick={handleSubmit}>
+                  Publish
+                </Button>
+              </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="grid gap-6">
-                            <FormField
-                                label="Title"
-                                id="title"
-                                maxLength={200}
-                                value={formData.title}
-                                onChange={(value) =>
-                                    setFormData(prev => ({ ...prev, title: value }))
-                                }
-                                error={errors.title}
-                            />
-                            <FormField
-                                label="Description"
-                                id="description"
-                                maxLength={200}
-                                value={formData.description}
-                                onChange={(value) =>
-                                    setFormData(prev => ({
-                                        ...prev,
-                                        description: value,
-                                    }))
-                                }
-                                error={errors.description}
-                                isTextarea
-                            />
-                            <FormField
-                                label="Thumbnail URL"
-                                id="thumbnailUrl"
-                                maxLength={1000}
-                                value={formData.thumbnailUrl}
-                                onChange={(value) =>
-                                    setFormData(prev => ({
-                                        ...prev,
-                                        thumbnailUrl: value,
-                                    }))
-                                }
-                                error={errors.thumbnailUrl}
-                            />
-                            <div className="grid gap-2">
-                                <Label className="text-muted-foreground">
-                                    Category
-                                </Label>
-                                <Select
-                                    value={formData.subCategoryId}
-                                    onValueChange={(value) =>
-                                        setFormData(prev => ({
-                                            ...prev,
-                                            subCategoryId: value,
-                                        }))
-                                    }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select category" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {subCategories.map((category) => (
-                                            <SelectItem
-                                                key={category.id}
-                                                value={category.id}
-                                            >
-                                                {category.title}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+            <Tabs defaultValue="editor" value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="editor" className="text-zinc-800 dark:text-zinc-200">
+                  <EyeOff className="w-4 h-4 mr-2" />
+                  Editor
+                </TabsTrigger>
+                <TabsTrigger value="preview" className="text-zinc-800 dark:text-zinc-200">
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview
+                </TabsTrigger>
+              </TabsList>
 
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-medium">Content Sections</h3>
-                                <div className="flex gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => addSection('text')}
-                                    >
-                                        <Type className="h-4 w-4 mr-2" />
-                                        Add Text
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => addSection('image')}
-                                    >
-                                        <ImageIcon className="h-4 w-4 mr-2" />
-                                        Add Image
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => addSection('separator')}
-                                    >
-                                        <Minus className="h-4 w-4 mr-2" />
-                                        Add Separator
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <DragDropContext onDragEnd={handleDragEnd}>
-                                <Droppable droppableId="sections">
-                                    {(provided) => (
-                                        <div
-                                            {...provided.droppableProps}
-                                            ref={provided.innerRef}
-                                            className="space-y-4"
-                                        >
-                                            {formData.sections.map((section, index) => (
-                                                <SectionItem
-                                                    key={`section-${index}`}
-                                                    section={section}
-                                                    index={index}
-                                                    onUpdate={(updatedSection) =>
-                                                        updateSection(index, updatedSection)
-                                                    }
-                                                    onDelete={() => deleteSection(index)}
-                                                />
-                                            ))}
-                                            {provided.placeholder}
-                                        </div>
-                                    )}
-                                </Droppable>
-                            </DragDropContext>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <div className="flex justify-end gap-4">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => router.push('/news')}
-                    >
-                        Cancel
-                    </Button>
-                    <Button type="submit" variant="default">
-                        Create News
-                    </Button>
-                </div>
-            </form>
+              <div className="mt-6">
+                <TabsContent value="editor">
+                  <EditorView
+                    title={title}
+                    setTitle={setTitle}
+                    description={description}
+                    setDescription={setDescription}
+                    thumbnailUrl={thumbnailUrl}
+                    setThumbnailUrl={setThumbnailUrl}
+                    subCategoryId={subCategoryId}
+                    setSubCategoryId={setSubCategoryId}
+                    subCategories={subCategories}
+                    isLoadingSubCategories={isLoadingSubCategories}
+                    sections={sections}
+                    setSections={setSections}
+                    isDragging={isDragging}
+                    draggedIndex={draggedIndex}
+                    handleDragStart={handleDragStart}
+                    handleDragOver={handleDragOver}
+                    handleDragEnd={handleDragEnd}
+                    addSection={addSection}
+                    updateSection={updateSection}
+                    removeSection={removeSection}
+                  />
+                </TabsContent>
+                <TabsContent value="preview">
+                  <PreviewView
+                    title={title}
+                    description={description}
+                    thumbnailUrl={thumbnailUrl}
+                    sections={sections}
+                  />
+                </TabsContent>
+              </div>
+            </Tabs>
+          </div>
         </div>
+      </div>
     );
-};
+  };
 
-export default CreateNewsPage;
+  export default CreateNewsPage;

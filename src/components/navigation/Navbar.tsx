@@ -9,6 +9,7 @@ import {
     Settings,
     LayoutDashboard,
 } from 'lucide-react';
+import { useUser, useAuth } from '@clerk/nextjs';
 import ModeToggle from '@/components/mode-toggle';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -44,23 +45,28 @@ import {
 import { DialogTitle } from '@/components/ui/dialog';
 import { getCategories } from '@/actions/category';
 import type { Category } from '@/types';
+import { getCurrentUserData } from '@/actions/user';
 
 const Navbar = () => {
+    const { user, isSignedIn } = useUser();
+    const { signOut } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [isAdmin, setIsAdmin] = useState(false);
     const [categories, setCategories] = useState<Category[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [userRole, setUserRole] = useState<string | null>(null);
+
+    // Dapatkan initial huruf untuk Avatar fallback
+    const getInitials = () => {
+        if (!user?.firstName && !user?.lastName) {
+            return user?.emailAddresses[0]?.emailAddress?.charAt(0).toUpperCase() || '?';
+        }
+        return `${user?.firstName?.charAt(0) || ''}${user?.lastName?.charAt(0) || ''}`;
+    };
 
     useEffect(() => {
-        const loginStatus = localStorage.getItem('isLoggedIn');
-        const userRole = localStorage.getItem('userRole');
-        setIsLoggedIn(loginStatus === 'true');
-        setIsAdmin(userRole === 'admin');
-
         // Fetch categories using server action
         const fetchCategories = async () => {
             try {
@@ -77,6 +83,24 @@ const Navbar = () => {
 
         fetchCategories();
     }, []);
+
+    useEffect(() => {
+        // Fetch user role from database
+        const fetchUserRole = async () => {
+            if (isSignedIn) {
+                try {
+                    const userData = await getCurrentUserData();
+                    if (userData) {
+                        setUserRole(userData.role);
+                    }
+                } catch (error) {
+                    console.error('Error fetching user role:', error);
+                }
+            }
+        };
+
+        fetchUserRole();
+    }, [isSignedIn]);
 
     // Transform categories into menu items
     const menuItems = [
@@ -96,12 +120,9 @@ const Navbar = () => {
         return currentMenuItem?.label !== 'Home' ? currentMenuItem?.label : null;
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('userRole');
-        setIsLoggedIn(false);
-        setIsAdmin(false);
-        router.push('/login');
+    const handleLogout = async () => {
+        await signOut();
+        router.push('/sign-in');
     };
 
     const SearchCommand = () => (
@@ -137,17 +158,21 @@ const Navbar = () => {
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                     <Avatar className="h-8 w-8">
-                        <AvatarImage src="/avatar-placeholder.jpg" />
-                        <AvatarFallback>JD</AvatarFallback>
+                        <AvatarImage src={user?.imageUrl} />
+                        <AvatarFallback>{getInitials()}</AvatarFallback>
                     </Avatar>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end">
                 <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium">Joy</p>
-                        <p className="text-xs text-muted-foreground">joy@gmail.com</p>
-                        {isAdmin && (
+                        <p className="text-sm font-medium">
+                            {user?.firstName} {user?.lastName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            {user?.emailAddresses[0]?.emailAddress}
+                        </p>
+                        {userRole === 'admin' && ( // Ubah kondisi ini
                             <Badge variant="outline" className="w-fit mt-1">
                                 Admin
                             </Badge>
@@ -156,7 +181,7 @@ const Navbar = () => {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                    {isAdmin && (
+                    {userRole === 'admin' && ( // Ubah kondisi ini
                         <DropdownMenuItem asChild>
                             <Link href="/admin" className="flex items-center">
                                 <LayoutDashboard className="w-4 h-4 mr-2" />
@@ -253,11 +278,11 @@ const Navbar = () => {
                         </Button>
                         <ModeToggle />
 
-                        {isLoggedIn ? (
+                        {isSignedIn ? (
                             <ProfileDropdown />
                         ) : (
                             <Button variant="ghost" size="icon" asChild className="rounded-full">
-                                <Link href="/login">
+                                <Link href="/sign-in">
                                     <UserCircle2 className="h-5 w-5" />
                                 </Link>
                             </Button>
@@ -301,10 +326,10 @@ const Navbar = () => {
                                         })
                                     )}
 
-                                    {isLoggedIn && (
+                                    {isSignedIn && (
                                         <>
                                             <div className="h-px bg-border" />
-                                            {isAdmin && (
+                                            {userRole === 'admin' && (
                                                 <Button
                                                     variant="ghost"
                                                     className="w-full justify-start"
